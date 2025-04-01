@@ -1,0 +1,45 @@
+/* Style the GridPane */
+GridPane {
+    -fx-background-color: #f4f4f4;
+}
+
+/* Style Buttons */
+Button {
+    -fx-font-size: 14px;
+    -fx-background-color: #4CAF50;
+    -fx-text-fill: white;
+    -fx-text-background-color: transparent;
+    -fx-padding: 8px 16px;
+    -fx-border-radius: 5px;
+}
+
+/* Hover effect */
+Button:hover {
+    -fx-background-color: #45a049; /* Slightly darker green */
+    -fx-scale-x: 1.1;  /* Slightly increase size */
+    -fx-scale-y: 1.1;
+    -fx-cursor: hand;
+}
+
+/* Pressed effect (when clicked) */
+Button:pressed {
+    -fx-background-color: #388E3C; /* Even darker green */
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+}
+
+/* Style TextField */
+TextField {
+    -fx-border-color: #4CAF50;
+    -fx-border-width: 2px;
+    -fx-padding: 5px;
+}
+
+Label {
+    -fx-font-size: 16px;
+}
+
+.titleLabel {
+    -fx-font-weight: bold;
+    -fx-font-size: 18px;
+}
