@@ -4,11 +4,14 @@ package com.example.apt_project;
 import javafx.fxml.FXML;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
 import org.fxmisc.richtext.CodeArea;
 import org.fxmisc.richtext.LineNumberFactory;
 import org.fxmisc.flowless.VirtualizedScrollPane;
 
-
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 
 
 public class NewDocument {
@@ -16,6 +19,7 @@ public class NewDocument {
     public VBox sidebar;
     public HBox mainContainer;
     public CodeArea codeArea;
+    public String fileContent;
 
     @FXML
     public void initialize() {
@@ -27,7 +31,28 @@ public class NewDocument {
         codeArea.prefWidthProperty().bind(mainContainer.widthProperty());
 
         mainContainer.getChildren().add(1, codeArea);
-
-
     }
+
+    public void handleExport() throws IOException
+    {
+        fileContent = codeArea.getText();
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Save File");
+
+        // Set extension filter to save only .txt files
+        FileChooser.ExtensionFilter extFilter = new FileChooser.ExtensionFilter("Text files (*.txt)", "*.txt");
+        fileChooser.getExtensionFilters().add(extFilter);
+
+        // Show save file dialog
+        File file = fileChooser.showSaveDialog(null);
+
+        if (file != null) {
+            try (FileWriter writer = new FileWriter(file)) {
+                writer.write(fileContent);
+            } catch (IOException e) {
+                System.out.println("Error Exporting file (BrowseDocument.java)" + e);
+            }
+        }
+    }
+
 }

@@ -1,21 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
-<AnchorPane prefHeight="600.0" prefWidth="800.0"
-            xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="com.example.apt_project.NewDocument">
+<AnchorPane prefHeight="600.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.apt_project.NewDocument">
 
       <!-- Horizontal Box to Split Sidebar & Text Editor -->
-   <HBox fx:id="mainContainer" spacing="10.0" AnchorPane.topAnchor="0.0" AnchorPane.bottomAnchor="0.0"
-         AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0">
+   <HBox fx:id="mainContainer" spacing="10.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
 
       <!-- Sidebar (Future Controls) -->
       <VBox fx:id="sidebar" prefWidth="200.0" style="-fx-background-color: #2c3e50;">
-         <Label text="Controls" style="-fx-text-fill: white; -fx-font-size: 18px;"/>
+         <Label style="-fx-text-fill: white; -fx-font-size: 18px;" text="Controls" />
+         <Button fx:id="exportBtn" mnemonicParsing="false" onAction="#handleExport" text="Export" />
       </VBox>
 
 
