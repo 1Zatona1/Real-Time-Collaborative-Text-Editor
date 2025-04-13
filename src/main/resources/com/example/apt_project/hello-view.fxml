@@ -49,7 +49,7 @@
     <!-- Buttons (Aligned in the same row) -->
     <Button fx:id="newDocBtn" onAction="#handleNewDocBtn" text="New Document" GridPane.columnIndex="0" GridPane.halignment="CENTER" GridPane.rowIndex="4" />
 
-    <Button fx:id="browseBtn" text="Browse" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="4" />
+    <Button fx:id="browseBtn" onAction="#handleBrowse" text="Browse" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="4" />
 
     <Button fx:id="joinBtn" text="Join" GridPane.columnIndex="2" GridPane.halignment="CENTER" GridPane.rowIndex="4" />
    <Label fx:id="titleLabel" contentDisplay="CENTER" styleClass="titleLabel" text="Welcome to our Real-Time Collaborative Text Editor" textAlignment="CENTER" GridPane.columnIndex="1" />
