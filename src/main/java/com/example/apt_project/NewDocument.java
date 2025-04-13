@@ -22,15 +22,11 @@ public class NewDocument {
         codeArea = new CodeArea();
         codeArea.setWrapText(true);
         codeArea.setStyle("-fx-font-size: 14px; -fx-font-family: 'Consolas';");
-        codeArea.setParagraphGraphicFactory(LineNumberFactory.get(codeArea));
-
-        VirtualizedScrollPane<CodeArea> scrollPane = new VirtualizedScrollPane<>(codeArea);
 
         HBox.setHgrow(codeArea, javafx.scene.layout.Priority.ALWAYS);
         codeArea.prefWidthProperty().bind(mainContainer.widthProperty());
 
-        //mainContainer.getChildren().add(1, codeArea);
-        mainContainer.getChildren().add(1, scrollPane);
+        mainContainer.getChildren().add(1, codeArea);
 
 
     }

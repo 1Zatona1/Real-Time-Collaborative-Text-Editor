@@ -42,8 +42,5 @@ public class HelloController {
         newDocStage.setScene(newDocScene);
         newDocStage.setMaximized(true); // Maximize new window
         newDocStage.show();
-
-
-
     }
 }
