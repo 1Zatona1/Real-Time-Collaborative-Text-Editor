@@ -2,13 +2,11 @@ package com.example.apt_project;
 
 
 import javafx.fxml.FXML;
+import javafx.scene.control.Button;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import org.fxmisc.richtext.CodeArea;
-import org.fxmisc.richtext.LineNumberFactory;
-import org.fxmisc.flowless.VirtualizedScrollPane;
-
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -20,6 +18,7 @@ public class NewDocument {
     public HBox mainContainer;
     public CodeArea codeArea;
     public String fileContent;
+    public Button exportBtn;
 
     @FXML
     public void initialize() {
