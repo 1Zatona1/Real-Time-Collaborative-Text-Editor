@@ -39,6 +39,7 @@ public class CrdtTree {
     }
     public int getCount() {
         return count;
+
     }
     public void traverse() {
         // Start traversal from root's children
