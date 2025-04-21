@@ -1,6 +1,7 @@
 package treeCRDT;
 
 import java.sql.Timestamp;
+import java.util.Objects;
 
 class NodeId {
     private int userId;
@@ -25,5 +26,18 @@ class NodeId {
                 "id=" + userId +
                 ", timestamp='" + clock + '\'' +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (!(obj instanceof NodeId)) return false;
+        NodeId other = (NodeId) obj;
+        return userId == other.userId && clock.equals(other.clock);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(userId, clock);
     }
 }
