@@ -17,9 +17,9 @@ public class HelloApplication extends Application
         scene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
         stage.setTitle("Real-Time Collaborative Text Editor");
         stage.setScene(scene);
-        stage.setMaximized(true);
 
         stage.show();
+        stage.setMaximized(true);
     }
 
     public static void main(String[] args) {

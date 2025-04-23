@@ -5,6 +5,7 @@ module com.example.apt_project {
     requires richtextfx;  // Add javafx.graphics as well for RichTextFX
     requires flowless;
     requires java.sql;
+    requires reactfx;
 
     opens com.example.apt_project to javafx.fxml;
     exports com.example.apt_project;

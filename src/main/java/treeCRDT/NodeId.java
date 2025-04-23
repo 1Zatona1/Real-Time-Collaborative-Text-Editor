@@ -3,7 +3,7 @@ package treeCRDT;
 import java.sql.Timestamp;
 import java.util.Objects;
 
-class NodeId {
+public class NodeId {
     private int userId;
     private Timestamp clock;
 
