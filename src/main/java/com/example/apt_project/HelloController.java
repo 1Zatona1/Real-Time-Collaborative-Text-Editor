@@ -39,13 +39,14 @@ public class HelloController {
         mainStage.close();
 
         Stage newDocStage = new Stage();
-        Scene newDocScene = new Scene(root);
+        Scene newDocScene = new Scene(root, 800, 600);
 
         newDocScene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
         newDocStage.setTitle("Real-Time Collaborative Text Editor");
         newDocStage.setScene(newDocScene);
-        newDocStage.setMaximized(true); // Maximize new window
         newDocStage.show();
+        newDocStage.setMaximized(true); // Maximize new window
+
     }
 
     public void handleBrowse() throws IOException {

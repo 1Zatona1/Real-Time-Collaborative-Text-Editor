@@ -2,20 +2,47 @@
 
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
 <AnchorPane prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.apt_project.BrowseDocument">
+    <HBox fx:id="mainContainer" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+        <!-- Enhanced Sidebar -->
+        <VBox fx:id="sidebar" prefWidth="250.0" styleClass="sidebar">
+            <!-- Navigation Section -->
+            <Label styleClass="section-header" text="Document Controls" />
+            <Separator styleClass="section-separator" />
 
-      <HBox fx:id="mainContainer" spacing="10.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+            <VBox spacing="10" styleClass="button-group">
+                <Button fx:id="exportBtn" mnemonicParsing="false" onAction="#handleExport" text="Export Document" styleClass="btn-primary" />
+                <Button fx:id="backBtn" mnemonicParsing="false" onAction="#handleBackBtn" text="Back to Main" styleClass="btn-danger" />
+            </VBox>
 
-         <!-- Sidebar (Future Controls) -->
-         <VBox fx:id="sidebar" prefWidth="200.0" style="-fx-background-color: #2c3e50;">
-            <Label style="-fx-text-fill: white; -fx-font-size: 18px;" text="Controls" />
-            <Button fx:id="exportBtn" mnemonicParsing="false" onAction="#handleExport" text="Export" />
-         </VBox>
+            <!-- Code Sharing Section -->
+            <Label styleClass="section-header" text="Share Options" />
+            <Separator styleClass="section-separator" />
 
+            <!-- Editor Code -->
+            <VBox spacing="5" styleClass="code-group">
+                <Label fx:id="editorCodeLabel" styleClass="code-label" text="Editor Code" />
+                <HBox spacing="5" alignment="CENTER_LEFT">
+                    <Label fx:id="editorCodeText" styleClass="code-text" text="ABCD-1234" />
+                    <Button fx:id="copyEditorCodeBtn" mnemonicParsing="false" text="Copy" styleClass="btn-success, btn-small" />
+                </HBox>
+            </VBox>
 
-      </HBox>
+            <!-- Viewer Code -->
+            <VBox spacing="5" styleClass="code-group">
+                <Label fx:id="viewerCodeLabel" styleClass="code-label" text="Viewer Code" />
+                <HBox spacing="5" alignment="CENTER_LEFT">
+                    <Label fx:id="viewerCodeText" styleClass="code-text" text="EFGH-5678" />
+                    <Button fx:id="copyViewerCodeBtn" mnemonicParsing="false" text="Copy" styleClass="btn-success, btn-small" />
+                </HBox>
+            </VBox>
+        </VBox>
+
+        <!-- Content area will be added programmatically -->
+    </HBox>
 </AnchorPane>

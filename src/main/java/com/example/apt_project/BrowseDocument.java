@@ -1,11 +1,17 @@
 package com.example.apt_project;
 
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
+import javafx.stage.Stage;
 import org.fxmisc.richtext.CodeArea;
+import org.fxmisc.richtext.LineNumberFactory;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -17,6 +23,13 @@ public class BrowseDocument {
     public CodeArea codeArea;
     public String fileContent;
     public Button exportBtn;
+    public Button backBtn;
+    public Label editorCodeLabel;
+    public Button copyEditorCodeBtn;
+    public Label editorCodeText;
+    public Label viewerCodeLabel;
+    public Button copyViewerCodeBtn;
+    public Label viewerCodeText;
 
     public void setFileContent(String content)
     {
@@ -30,8 +43,8 @@ public class BrowseDocument {
     public void  initialize()
     {
         codeArea = new CodeArea();
-        codeArea.setWrapText(true);
-        codeArea.setStyle("-fx-font-size: 14px; -fx-font-family: 'Consolas';");
+        codeArea.getStyleClass().add("code-area");
+        codeArea.setParagraphGraphicFactory(LineNumberFactory.get(codeArea));
 
         HBox.setHgrow(codeArea, javafx.scene.layout.Priority.ALWAYS);
         codeArea.prefWidthProperty().bind(mainContainer.widthProperty());
@@ -42,6 +55,26 @@ public class BrowseDocument {
             codeArea.replaceText(fileContent);
         }
     }
+
+    public void handleBackBtn() throws IOException
+    {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("hello-view.fxml"));
+        Parent root = loader.load();
+
+        Stage currentStage = (Stage) backBtn.getScene().getWindow();
+        currentStage.close();
+
+        Stage newStage = new Stage();
+        Scene scene = new Scene(root, 800, 600);
+        scene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
+
+        newStage.setTitle("Real-Time Collaborative Text Editor");
+        newStage.setScene(scene);
+
+        newStage.show();
+        newStage.setMaximized(true);
+    }
+
 
     public void handleExport() throws IOException
     {
