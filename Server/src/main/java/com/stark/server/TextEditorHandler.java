@@ -10,19 +10,19 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class TextEditorHandler extends TextWebSocketHandler {
 
-    // Group users by document code
+    // Map of document code → all sessions editing that document
     private final Map<String, Set<WebSocketSession>> sessionGroups = new ConcurrentHashMap<>();
 
-    // Store shared document text by code
+    // Map of document code → current document content
     private final Map<String, String> documentStates = new ConcurrentHashMap<>();
 
-    // Track which code a session belongs to
+    // Map of session ID → which code it's in
     private final Map<String, String> sessionToCode = new ConcurrentHashMap<>();
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
         String code = getCodeFromURI(session.getUri());
-        if (code == null) {
+        if (code == null || code.isEmpty()) {
             try {
                 session.close(CloseStatus.BAD_DATA);
             } catch (IOException e) {
@@ -31,17 +31,19 @@ public class TextEditorHandler extends TextWebSocketHandler {
             return;
         }
 
-        // Add to session group
+        // Add session to its group
         sessionGroups.computeIfAbsent(code, k -> ConcurrentHashMap.newKeySet()).add(session);
         sessionToCode.put(session.getId(), code);
 
-        // Send current document state to the new user
+        // Send the current document state to the new user
         String currentText = documentStates.getOrDefault(code, "");
         try {
             session.sendMessage(new TextMessage(currentText));
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        System.out.println("✅ User joined code: " + code + " | Sessions in room: " + sessionGroups.get(code).size());
     }
 
     @Override
@@ -49,14 +51,14 @@ public class TextEditorHandler extends TextWebSocketHandler {
         String code = sessionToCode.get(session.getId());
         if (code == null) return;
 
-        // Update document state
+        // Update the document content
         documentStates.put(code, message.getPayload());
 
-        // Broadcast to others in the same session
-        for (WebSocketSession s : sessionGroups.getOrDefault(code, Collections.emptySet())) {
-            if (!s.getId().equals(session.getId()) && s.isOpen()) {
+        // Broadcast to all other users in the same code group
+        for (WebSocketSession peer : sessionGroups.getOrDefault(code, Collections.emptySet())) {
+            if (!peer.getId().equals(session.getId()) && peer.isOpen()) {
                 try {
-                    s.sendMessage(message);
+                    peer.sendMessage(message);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -74,6 +76,7 @@ public class TextEditorHandler extends TextWebSocketHandler {
                 if (group.isEmpty()) {
                     sessionGroups.remove(code);
                     documentStates.remove(code);
+                    System.out.println("🗑 Session group deleted for code: " + code);
                 }
             }
         }

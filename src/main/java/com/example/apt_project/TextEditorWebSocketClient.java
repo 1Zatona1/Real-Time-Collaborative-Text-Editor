@@ -5,7 +5,7 @@ import org.java_websocket.handshake.ServerHandshake;
 
 import java.net.URI;
 
-public class TextEditorWebsokcet extends WebSocketClient {
+public class TextEditorWebSocketClient extends WebSocketClient {
 
     public interface MessageHandler {
         void onMessageReceived(String message);
@@ -13,7 +13,7 @@ public class TextEditorWebsokcet extends WebSocketClient {
 
     private MessageHandler handler;
 
-    public TextEditorWebsokcet(URI serverUri, MessageHandler handler) {
+    public TextEditorWebSocketClient(URI serverUri, MessageHandler handler) {
         super(serverUri);
         this.handler = handler;
     }

@@ -15,6 +15,9 @@ public class CrdtTree {
     private String cachedText;
     private List<TreeChangeListener> listeners = new ArrayList<>();
 
+    public Map<NodeId, CrdtNode> getNodeIndex() {
+        return nodeIndex;
+    }
 
 
     public static class TreeChange {
