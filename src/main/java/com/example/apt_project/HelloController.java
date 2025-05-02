@@ -57,7 +57,6 @@ public class HelloController {
         }
 
         String response = wsClient.getLastMessage();
-        wsClient.close();
         if (response != null && response.startsWith("SESSION_CREATED:")) {
             String[] parts = response.split(":")[1].split(",");
             String editorCode = parts[0];
@@ -67,7 +66,10 @@ public class HelloController {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("NewDocument.fxml"));
             Parent root = loader.load();
             NewDocument controller = loader.getController();
-            controller.setSession(editorCode, viewerCode, sessionId);
+
+            // Don't close the connection, pass it to the NewDocument controller
+            String uri = "ws://localhost:8080/ws?code=" + editorCode;
+            controller.setSessionWithExistingConnection(editorCode, viewerCode, sessionId, uri, wsClient);
 
             Stage mainStage = (Stage) newDocBtn.getScene().getWindow();
             mainStage.close();
@@ -80,6 +82,7 @@ public class HelloController {
             newDocStage.show();
             newDocStage.setMaximized(true);
         } else {
+            wsClient.close(); // Close the connection if session creation failed
             showAlert("Error", "Failed to create session");
         }
     }
@@ -127,29 +130,35 @@ public class HelloController {
         CustomWebSocketClient wsClient = new CustomWebSocketClient(NetworkConfig.SERVER_URL,
                 op -> {}, // Ignore operations during validation
                 error -> Platform.runLater(() -> showAlert("Error", error)));
-        try {
+        try
+        {
             wsClient.connectBlocking();
             wsClient.send("VALIDATE_CODE:" + code);
-        } catch (InterruptedException e) {
+        } catch (InterruptedException e)
+        {
             showAlert("Error", "Connection interrupted: " + e.getMessage());
             return;
         }
 
         try {
             Thread.sleep(500);
-        } catch (InterruptedException e) {
+        } catch (InterruptedException e)
+        {
             showAlert("Error", "Interrupted while validating code");
             return;
         }
 
         String response = wsClient.getLastMessage();
-        wsClient.close();
-        if (response != null && response.startsWith("VALID_SESSION:")) {
+        if (response != null && response.startsWith("VALID_SESSION:"))
+        {
             String sessionId = response.split(":")[1];
             FXMLLoader loader = new FXMLLoader(getClass().getResource("NewDocument.fxml"));
             Parent root = loader.load();
             NewDocument controller = loader.getController();
-            controller.setSession(code, code.startsWith("V-") ? "" : code, sessionId);
+
+            // Don't close the connection, pass it to the NewDocument controller
+            String uri = "ws://localhost:8080/ws?code=" + code;
+            controller.setSessionWithExistingConnection(code, code.startsWith("V-") ? "" : code, sessionId, uri, wsClient);
 
             Stage mainStage = (Stage) joinBtn.getScene().getWindow();
             mainStage.close();
@@ -161,12 +170,16 @@ public class HelloController {
             newDocStage.setScene(newDocScene);
             newDocStage.show();
             newDocStage.setMaximized(true);
-        } else {
+        }
+        else
+        {
+            wsClient.close(); // Close the connection if validation failed
             showAlert("Error", "Invalid session code");
         }
     }
 
-    private void showAlert(String title, String message) {
+    private void showAlert(String title, String message)
+    {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle(title);
         alert.setHeaderText(null);

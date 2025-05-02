@@ -7,6 +7,9 @@ import java.net.URI;
 
 public class TextEditorWebSocketClient extends WebSocketClient {
 
+
+    int id=0;
+
     public interface MessageHandler {
         void onMessageReceived(String message);
     }
@@ -20,7 +23,8 @@ public class TextEditorWebSocketClient extends WebSocketClient {
 
     @Override
     public void onOpen(ServerHandshake handshakeData) {
-        System.out.println("Connected to WebSocket Server");
+        id++;
+        System.out.println("Connected to WebSocket Server " + this.id );
     }
 
     @Override
@@ -33,7 +37,8 @@ public class TextEditorWebSocketClient extends WebSocketClient {
 
     @Override
     public void onClose(int code, String reason, boolean remote) {
-        System.out.println("Disconnected from WebSocket Server");
+        System.out.println(this.id +"Disconnected from WebSocket Server");
+        id--;
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.example.apt_project;
 
 
+import Network.CustomWebSocketClient;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -66,7 +67,8 @@ public class NewDocument {
         }
 
         // Connect to WebSocket if not already connected
-        if (webSocketClient == null || !webSocketClient.isOpen()) {
+        if (webSocketClient == null || !webSocketClient.isOpen()) 
+        {
             try {
                 String uri = "ws://localhost:8080/ws?code=" + sessionCode;
                 webSocketClient = new TextEditorWebSocketClient(new URI(uri), msg -> {
@@ -78,7 +80,8 @@ public class NewDocument {
                     int pos = 0;
                     CrdtNode parent = crdtTree.getRoot();
 
-                    for (char c : msg.toCharArray()) {
+                    for (char c : msg.toCharArray())
+                    {
                         NodeId id = new NodeId(0, new Timestamp(System.currentTimeMillis())); // Remote change
                         CrdtNode node = new CrdtNode(id, c);
                         crdtTree.addChild(parent.getId(), node);
@@ -97,10 +100,55 @@ public class NewDocument {
         }
     }
 
+    public void setSessionWithExistingConnection(String editorCode, String viewerCode, String sessionId, String uri, CustomWebSocketClient existingClient) {
+        this.editorCode = editorCode;
+        this.viewerCode = viewerCode;
+        this.sessionId = sessionId;
+        this.sessionCode = editorCode; // Use editor code for connection
+
+        // Update UI
+        if (editorCodeText != null) {
+            editorCodeText.setText(editorCode);
+        }
+        if (viewerCodeText != null) {
+            viewerCodeText.setText(viewerCode);
+        }
+
+        // Create a new TextEditorWebSocketClient with the same URI
+        try {
+            // We don't need to close the existing client, just create a new one
+            webSocketClient = new TextEditorWebSocketClient(new URI(uri), msg -> {
+                ignoreIncoming = true;
+
+                // Clear and rebuild CRDT from received text
+                crdtTree = new CrdtTree();
+                positionToNodeMap.clear();
+                int pos = 0;
+                CrdtNode parent = crdtTree.getRoot();
+
+                for (char c : msg.toCharArray()) {
+                    NodeId id = new NodeId(0, new Timestamp(System.currentTimeMillis())); // Remote change
+                    CrdtNode node = new CrdtNode(id, c);
+                    crdtTree.addChild(parent.getId(), node);
+                    positionToNodeMap.put(pos++, node);
+                    parent = node;
+                }
+
+                updateUIFromCRDT(); // Update CodeArea from CRDT
+                ignoreIncoming = false;
+            });
+
+            webSocketClient.connect();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 
 
     @FXML
-    public void initialize() {
+    public void initialize()
+    {
         codeArea = new CodeArea();
         codeArea.getStyleClass().add("code-area"); // Add CSS class
 
@@ -117,14 +165,16 @@ public class NewDocument {
         mainContainer.getChildren().add(1, codeArea);
 
         // If no session has been set yet, use a default one for testing
-        if (sessionCode == null) {
+        if (sessionCode == null)
+        {
             // Generate random 6-digit code
-            //sessionCode = String.valueOf(new Random().nextInt(900000) + 100000);
-            sessionCode = "999999"; // For testing purposes
+            sessionCode = String.valueOf(new Random().nextInt(900000) + 100000);
+            //sessionCode = "999999"; // For testing purposes
             editorCode = sessionCode;
             viewerCode = sessionCode;
 
-            if (editorCodeText != null) {
+            if (editorCodeText != null)
+            {
                 editorCodeText.setText(sessionCode); // Label on screen
             }
 

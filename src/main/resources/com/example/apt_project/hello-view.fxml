@@ -40,6 +40,7 @@
         <Image url="@Join_Session.jpg" />
     </ImageView>
 
+
     <!-- Label for Input Field -->
     <Label fx:id="sessionLabel" text="Enter Session ID:" GridPane.columnIndex="2" GridPane.halignment="CENTER" GridPane.rowIndex="2" styleClass="section-header"/>
 
@@ -51,6 +52,6 @@
 
     <Button fx:id="browseBtn" onAction="#handleBrowse" text="Browse" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="4" styleClass="btn-success"/>
 
-    <Button fx:id="joinBtn" text="Join" GridPane.columnIndex="2" GridPane.halignment="CENTER" GridPane.rowIndex="4" styleClass="btn-success"/>
+    <Button fx:id="joinBtn" onAction="#handleJoinBtn" text="Join" GridPane.columnIndex="2" GridPane.halignment="CENTER" GridPane.rowIndex="4" styleClass="btn-success"/>
    <Label fx:id="titleLabel" contentDisplay="CENTER" styleClass="titleLabel" text="Welcome to our Real-Time Collaborative Text Editor" textAlignment="CENTER" GridPane.columnIndex="1" />
 </GridPane>
