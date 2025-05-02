@@ -158,7 +158,10 @@ public class HelloController {
 
             // Don't close the connection, pass it to the NewDocument controller
             String uri = "ws://localhost:8080/ws?code=" + code;
-            controller.setSessionWithExistingConnection(code, code.startsWith("V-") ? "" : code, sessionId, uri, wsClient);
+            // If it's a viewer code, pass empty string as editor code, otherwise pass the code as editor code
+            String editorCode = code.startsWith("V-") ? "" : code;
+            String viewerCode = code.startsWith("V-") ? code : "";
+            controller.setSessionWithExistingConnection(editorCode, viewerCode, sessionId, uri, wsClient);
 
             Stage mainStage = (Stage) joinBtn.getScene().getWindow();
             mainStage.close();

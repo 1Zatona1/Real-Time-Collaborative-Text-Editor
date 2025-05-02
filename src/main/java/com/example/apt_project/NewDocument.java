@@ -8,6 +8,8 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
@@ -56,7 +58,8 @@ public class NewDocument {
         this.editorCode = editorCode;
         this.viewerCode = viewerCode;
         this.sessionId = sessionId;
-        this.sessionCode = editorCode; // Use editor code for connection
+        // Use the appropriate code for connection - if editorCode is empty, use viewerCode
+        this.sessionCode = editorCode.isEmpty() ? viewerCode : editorCode;
 
         // Update UI
         if (editorCodeText != null) {
@@ -104,7 +107,8 @@ public class NewDocument {
         this.editorCode = editorCode;
         this.viewerCode = viewerCode;
         this.sessionId = sessionId;
-        this.sessionCode = editorCode; // Use editor code for connection
+        // Use the appropriate code for connection - if editorCode is empty, use viewerCode
+        this.sessionCode = editorCode.isEmpty() ? viewerCode : editorCode;
 
         // Update UI
         if (editorCodeText != null) {
@@ -323,6 +327,26 @@ public class NewDocument {
             } catch (IOException e) {
                 System.out.println("Error Exporting file (BrowseDocument.java)" + e);
             }
+        }
+    }
+
+    @FXML
+    public void handleCopyEditorCode() {
+        if (editorCode != null && !editorCode.isEmpty()) {
+            final Clipboard clipboard = Clipboard.getSystemClipboard();
+            final ClipboardContent content = new ClipboardContent();
+            content.putString(editorCode);
+            clipboard.setContent(content);
+        }
+    }
+
+    @FXML
+    public void handleCopyViewerCode() {
+        if (viewerCode != null && !viewerCode.isEmpty()) {
+            final Clipboard clipboard = Clipboard.getSystemClipboard();
+            final ClipboardContent content = new ClipboardContent();
+            content.putString(viewerCode);
+            clipboard.setContent(content);
         }
     }
 

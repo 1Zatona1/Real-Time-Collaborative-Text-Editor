@@ -102,8 +102,9 @@ public class WebSocketController extends TextWebSocketHandler {
                 }
             }
 
-            // Fallback to extracting from path
-            return uri.substring(uri.lastIndexOf("/") + 1);
+            // If we couldn't extract a valid session ID from the code, return default
+            // Don't fallback to extracting from path as it can cause issues with multiple clients
+            return "default"; // Temporary session ID for initial connection
         } catch (Exception e) {
             System.out.println("Error extracting session ID: " + e.getMessage());
             return "default"; // Temporary session ID for initial connection

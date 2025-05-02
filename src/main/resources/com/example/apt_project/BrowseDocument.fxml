@@ -29,7 +29,7 @@
                 <Label fx:id="editorCodeLabel" styleClass="code-label" text="Editor Code" />
                 <HBox spacing="5" alignment="CENTER_LEFT">
                     <Label fx:id="editorCodeText" styleClass="code-text" text="ABCD-1234" />
-                    <Button fx:id="copyEditorCodeBtn" mnemonicParsing="false" text="Copy" styleClass="btn-success, btn-small" />
+                    <Button fx:id="copyEditorCodeBtn" mnemonicParsing="false" onAction="#handleCopyEditorCode" text="Copy" styleClass="btn-success, btn-small" />
                 </HBox>
             </VBox>
 
@@ -38,7 +38,7 @@
                 <Label fx:id="viewerCodeLabel" styleClass="code-label" text="Viewer Code" />
                 <HBox spacing="5" alignment="CENTER_LEFT">
                     <Label fx:id="viewerCodeText" styleClass="code-text" text="EFGH-5678" />
-                    <Button fx:id="copyViewerCodeBtn" mnemonicParsing="false" text="Copy" styleClass="btn-success, btn-small" />
+                    <Button fx:id="copyViewerCodeBtn" mnemonicParsing="false" onAction="#handleCopyViewerCode" text="Copy" styleClass="btn-success, btn-small" />
                 </HBox>
             </VBox>
         </VBox>
