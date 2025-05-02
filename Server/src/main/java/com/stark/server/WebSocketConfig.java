@@ -8,17 +8,14 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 @Configuration
 @EnableWebSocket
 public class WebSocketConfig implements WebSocketConfigurer {
+    private final WebSocketController webSocketController;
 
-    private final TextEditorHandler textEditorHandler;
-
-    public WebSocketConfig(TextEditorHandler textEditorHandler) {
-        this.textEditorHandler = textEditorHandler;
+    public WebSocketConfig(WebSocketController webSocketController) {
+        this.webSocketController = webSocketController;
     }
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(textEditorHandler, "/ws")
-                .setAllowedOrigins("*")
-                .withSockJS(); // Add SockJS for fallback support
+        registry.addHandler(webSocketController, "/ws").setAllowedOrigins("*");
     }
 }

@@ -46,9 +46,56 @@ public class NewDocument {
     private int logicalPositionCounter = 0;
     private TextEditorWebSocketClient webSocketClient;
     private String sessionCode;
+    private String editorCode;
+    private String viewerCode;
+    private String sessionId;
     private boolean ignoreIncoming = false;
 
+    public void setSession(String editorCode, String viewerCode, String sessionId) {
+        this.editorCode = editorCode;
+        this.viewerCode = viewerCode;
+        this.sessionId = sessionId;
+        this.sessionCode = editorCode; // Use editor code for connection
 
+        // Update UI
+        if (editorCodeText != null) {
+            editorCodeText.setText(editorCode);
+        }
+        if (viewerCodeText != null) {
+            viewerCodeText.setText(viewerCode);
+        }
+
+        // Connect to WebSocket if not already connected
+        if (webSocketClient == null || !webSocketClient.isOpen()) {
+            try {
+                String uri = "ws://localhost:8080/ws?code=" + sessionCode;
+                webSocketClient = new TextEditorWebSocketClient(new URI(uri), msg -> {
+                    ignoreIncoming = true;
+
+                    // Clear and rebuild CRDT from received text
+                    crdtTree = new CrdtTree();
+                    positionToNodeMap.clear();
+                    int pos = 0;
+                    CrdtNode parent = crdtTree.getRoot();
+
+                    for (char c : msg.toCharArray()) {
+                        NodeId id = new NodeId(0, new Timestamp(System.currentTimeMillis())); // Remote change
+                        CrdtNode node = new CrdtNode(id, c);
+                        crdtTree.addChild(parent.getId(), node);
+                        positionToNodeMap.put(pos++, node);
+                        parent = node;
+                    }
+
+                    updateUIFromCRDT(); // Update CodeArea from CRDT
+                    ignoreIncoming = false;
+                });
+
+                webSocketClient.connect();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
 
 
 
@@ -69,40 +116,47 @@ public class NewDocument {
 
         mainContainer.getChildren().add(1, codeArea);
 
-        // Generate random 6-digit code
-        //sessionCode = String.valueOf(new Random().nextInt(900000) + 100000);
-        sessionCode = "999999"; // For testing purposes
-        editorCodeText.setText(sessionCode); // Label on screen
+        // If no session has been set yet, use a default one for testing
+        if (sessionCode == null) {
+            // Generate random 6-digit code
+            //sessionCode = String.valueOf(new Random().nextInt(900000) + 100000);
+            sessionCode = "999999"; // For testing purposes
+            editorCode = sessionCode;
+            viewerCode = sessionCode;
 
-        try {
-            String uri = "ws://localhost:8080/ws?code=" + sessionCode;
-            webSocketClient = new TextEditorWebSocketClient(new URI(uri), msg -> {
-                ignoreIncoming = true;
+            if (editorCodeText != null) {
+                editorCodeText.setText(sessionCode); // Label on screen
+            }
 
-                // Clear and rebuild CRDT from received text
-                crdtTree = new CrdtTree();
-                positionToNodeMap.clear();
-                int pos = 0;
-                CrdtNode parent = crdtTree.getRoot();
+            // Connect to WebSocket
+            try {
+                String uri = "ws://localhost:8080/ws?code=" + sessionCode;
+                webSocketClient = new TextEditorWebSocketClient(new URI(uri), msg -> {
+                    ignoreIncoming = true;
 
-                for (char c : msg.toCharArray()) {
-                    NodeId id = new NodeId(0, new Timestamp(System.currentTimeMillis())); // Remote change
-                    CrdtNode node = new CrdtNode(id, c);
-                    crdtTree.addChild(parent.getId(), node);
-                    positionToNodeMap.put(pos++, node);
-                    parent = node;
-                }
+                    // Clear and rebuild CRDT from received text
+                    crdtTree = new CrdtTree();
+                    positionToNodeMap.clear();
+                    int pos = 0;
+                    CrdtNode parent = crdtTree.getRoot();
 
-                updateUIFromCRDT(); // Update CodeArea from CRDT
-                ignoreIncoming = false;
-            });
+                    for (char c : msg.toCharArray()) {
+                        NodeId id = new NodeId(0, new Timestamp(System.currentTimeMillis())); // Remote change
+                        CrdtNode node = new CrdtNode(id, c);
+                        crdtTree.addChild(parent.getId(), node);
+                        positionToNodeMap.put(pos++, node);
+                        parent = node;
+                    }
 
-            webSocketClient.connect();
-        } catch (Exception e) {
-            e.printStackTrace();
+                    updateUIFromCRDT(); // Update CodeArea from CRDT
+                    ignoreIncoming = false;
+                });
+
+                webSocketClient.connect();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
-
-
     }
 
     public void handleBackBtn() throws IOException
@@ -125,8 +179,6 @@ public class NewDocument {
 
 
     }
-
-
 
     private void handleTextChange(PlainTextChange change) {
         // Handle deletions
