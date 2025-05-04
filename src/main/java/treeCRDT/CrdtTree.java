@@ -1,30 +1,37 @@
 package treeCRDT;
 
+import Network.Operation;
+
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class CrdtTree {
     private CrdtNode root;
-    private  final Map<NodeId, CrdtNode> nodeIndex = new HashMap<>();
+    private final Map<NodeId, CrdtNode> nodeIndex = new HashMap<>();
     private int count;
     private List<CrdtNode> lastFlattenedState = new ArrayList<>();
     private Map<Integer, CrdtNode> positionToNodeMap = new HashMap<>();
     private String cachedText;
     private List<TreeChangeListener> listeners = new ArrayList<>();
 
+    private Stack<Operation> undoStack = new Stack<>();
+    private Stack<Operation> redoStack = new Stack<>();
+
     public Map<NodeId, CrdtNode> getNodeIndex() {
         return nodeIndex;
     }
-
 
     public static class TreeChange {
         public enum Type { INSERT, DELETE }
         public Type type;
         public int position;
         public String text;
+
+        public TreeChange(Type type, int position, String text) {
+            this.type = type;
+            this.position = position;
+            this.text = text;
+        }
     }
 
     public interface TreeChangeListener {
@@ -65,7 +72,6 @@ public class CrdtTree {
         List<CrdtNode> currentState = flattenTree();
         List<TreeChange> changes = new ArrayList<>();
 
-        // Simple diff between last state and current state
         int minLength = Math.min(lastFlattenedState.size(), currentState.size());
 
         // Check for modifications in existing nodes
@@ -75,9 +81,9 @@ public class CrdtTree {
 
             if (!nodesEqual(oldNode, newNode)) {
                 if (newNode.isDeleted()) {
-                    changes.add(new TreeChange());
+                    changes.add(new TreeChange(TreeChange.Type.DELETE, i, String.valueOf(oldNode.getValue())));
                 } else if (oldNode.isDeleted() && !newNode.isDeleted()) {
-                    changes.add(new TreeChange());
+                    changes.add(new TreeChange(TreeChange.Type.INSERT, i, String.valueOf(newNode.getValue())));
                 }
             }
         }
@@ -86,23 +92,26 @@ public class CrdtTree {
         for (int i = minLength; i < currentState.size(); i++) {
             CrdtNode node = currentState.get(i);
             if (!node.isDeleted()) {
-                changes.add(new TreeChange());
+                changes.add(new TreeChange(TreeChange.Type.INSERT, i, String.valueOf(node.getValue())));
             }
         }
 
         // Handle deletions from end
         for (int i = minLength; i < lastFlattenedState.size(); i++) {
-            changes.add(new TreeChange());
+            CrdtNode node = lastFlattenedState.get(i);
+            changes.add(new TreeChange(TreeChange.Type.DELETE, i, String.valueOf(node.getValue())));
         }
 
         lastFlattenedState = new ArrayList<>(currentState);
+        updatePositionMap(lastFlattenedState);
+        cachedText = null; // Invalidate cache
         return changes;
     }
 
     private boolean nodesEqual(CrdtNode a, CrdtNode b) {
         if (a == b) return true;
         if (a == null || b == null) return false;
-        return a.getValue() == b.getValue() &&
+        return a.getValue() == b.getValue() && // char comparison with == is fine for primitives
                 a.isDeleted() == b.isDeleted() &&
                 a.getId().equals(b.getId());
     }
@@ -125,8 +134,6 @@ public class CrdtTree {
 
     public CrdtTree() {
         this.count = 0;
-
-        // Create a root node with userId=0 and timestamp=0
         this.root = new CrdtNode(new NodeId(0, Timestamp.valueOf("1970-01-01 00:00:00")), '\u0000');
         nodeIndex.put(root.getId(), root);
     }
@@ -138,6 +145,7 @@ public class CrdtTree {
     public void setRoot(CrdtNode root) {
         this.root = root;
     }
+
     public synchronized void addChild(NodeId parentId, CrdtNode child) {
         CrdtNode parent = nodeIndex.get(parentId);
 
@@ -147,34 +155,157 @@ public class CrdtTree {
 
         if (parent != null) {
             parent.addChild(child);
-            nodeIndex.put(child.getId(), child); // Index the new child
+            nodeIndex.put(child.getId(), child);
             count++;
+
+            // Create and store operation
+            Operation op = new Operation(
+                    "INSERT",
+                    child.getId().getClock(),
+                    getPositionForNode(child),
+                    child.getId().getUserId(),
+                    String.valueOf(child.getValue()),
+                    child.getId(),
+                    parentId
+            );
+            undoStack.push(op);
+            redoStack.clear(); // New operation invalidates redo history
+
+            // Update state
+            lastFlattenedState = flattenTree();
+            updatePositionMap(lastFlattenedState);
+            cachedText = null; // Invalidate cache
+            notifyChanges(getChangesSinceLastUpdate());
         }
     }
+
+    public synchronized void deleteNode(NodeId nodeId, int position, int userId, Timestamp timestamp) {
+        CrdtNode node = nodeIndex.get(nodeId);
+        if (node != null && !node.isDeleted()) {
+            node.setDeleted(true);
+
+            // Create and store operation
+            Operation op = new Operation(
+                    "DELETE",
+                    timestamp,
+                    position,
+                    userId,
+                    String.valueOf(node.getValue()),
+                    nodeId,
+                    null // No parent for delete
+            );
+            undoStack.push(op);
+            redoStack.clear();
+
+            // Update state
+            lastFlattenedState = flattenTree();
+            updatePositionMap(lastFlattenedState);
+            cachedText = null; // Invalidate cache
+            notifyChanges(getChangesSinceLastUpdate());
+        }
+    }
+
+    public synchronized void undo()
+    {
+        if (undoStack.isEmpty()) return;
+
+        Operation op = undoStack.pop();
+        CrdtNode node = nodeIndex.get(op.getNodeId());
+        if (node == null) return;
+
+        List<TreeChange> changes = new ArrayList<>();
+        if ("INSERT".equals(op.getType()))
+        {
+            node.setDeleted(true);
+            changes.add(new TreeChange(TreeChange.Type.DELETE, op.getPosition(), op.getTextChanged()));
+        } else if ("DELETE".equals(op.getType()))
+        {
+            // Undo delete: restore node
+            node.setDeleted(false);
+            changes.add(new TreeChange(TreeChange.Type.INSERT, op.getPosition(), op.getTextChanged()));
+        }
+
+        // Update state
+        lastFlattenedState = flattenTree();
+        updatePositionMap(lastFlattenedState);
+        cachedText = null; // Invalidate cache
+        redoStack.push(op); // Enable redo
+        notifyChanges(changes);
+    }
+
+    public synchronized void redo()
+    {
+        if (redoStack.isEmpty()) return;
+
+        Operation op = redoStack.pop();
+        CrdtNode node = nodeIndex.get(op.getNodeId());
+        List<TreeChange> changes = new ArrayList<>();
+
+        if ("INSERT".equals(op.getType()))
+        {
+            // Redo insert: restore node
+            if (node != null) {
+                node.setDeleted(false);
+            } else {
+                // Re-add node if it was removed
+                CrdtNode parent = nodeIndex.get(op.getParentNodeId());
+                if (parent != null)
+                {
+                    CrdtNode newNode = new CrdtNode(op.getNodeId(), op.getTextChanged().charAt(0));
+                    parent.addChild(newNode);
+                    nodeIndex.put(newNode.getId(), newNode);
+                }
+            }
+            changes.add(new TreeChange(TreeChange.Type.INSERT, op.getPosition(), op.getTextChanged()));
+        }
+        else if ("DELETE".equals(op.getType()))
+        {
+            // Redo delete: mark node as deleted
+            if (node != null)
+            {
+                node.setDeleted(true);
+                changes.add(new TreeChange(TreeChange.Type.DELETE, op.getPosition(), op.getTextChanged()));
+            }
+        }
+
+        // Update state
+        lastFlattenedState = flattenTree();
+        updatePositionMap(lastFlattenedState);
+        cachedText = null; // Invalidate cache
+        undoStack.push(op); // Enable undo
+        notifyChanges(changes);
+    }
+
+    private int getPositionForNode(CrdtNode node)
+    {
+        List<CrdtNode> flattened = flattenTree();
+        for (int i = 0; i < flattened.size(); i++)
+        {
+            if (flattened.get(i).equals(node))
+            {
+                return i;
+            }
+        }
+        return flattened.size(); // Append at end if not found
+    }
+
     public int getCount() {
         return count;
-
     }
+
     public void traverse() {
-        // Start traversal from root's children
         for (CrdtNode child : root.getChildren()) {
-            traverse(child); // Traverse each child of the root
+            traverse(child);
         }
     }
 
-
-    // Recursive method to traverse from a given node
     private void traverse(CrdtNode node) {
         if (node == null || node.isDeleted()) {
-            return; // Skip if the node is null or marked as deleted
+            return;
         }
-
-        // Process current node (print or do any necessary operation)
         System.out.println("Node Value: " + node.getValue() + ", ID: " + node.getId());
-
-        // Traverse children nodes (TreeSet ensures sorted order by timestamp and userId)
         for (CrdtNode child : node.getChildren()) {
-            traverse(child); // Recursive call to traverse each child
+            traverse(child);
         }
     }
 
@@ -185,12 +316,10 @@ public class CrdtTree {
         System.out.println("====================");
     }
 
-    private void printNode(CrdtNode node, int depth, Map<Integer, Boolean> lastChildMap) {
+    private void printNode(CrdtNode node, int depth, Map<Integer, Boolean>   lastChildMap) {
         if (node == null) return;
 
-        // Skip printing the root node's value (it's just a placeholder)
         if (depth > 0) {
-            // Build the tree prefix
             StringBuilder prefix = new StringBuilder();
             for (int i = 1; i < depth; i++) {
                 prefix.append(lastChildMap.getOrDefault(i, false) ? "    " : "│   ");
@@ -199,7 +328,6 @@ public class CrdtTree {
                 prefix.append(lastChildMap.getOrDefault(depth, false) ? "└── " : "├── ");
             }
 
-            // Print node information
             System.out.printf("%s%s (User: %d, Time: %s%s)%n",
                     prefix,
                     node.getValue(),
@@ -208,7 +336,6 @@ public class CrdtTree {
                     node.isDeleted() ? " [DELETED]" : "");
         }
 
-        // Recursively print children
         int childCount = node.getChildren().size();
         for (int i = 0; i < childCount; i++) {
             CrdtNode child = node.getChildren().get(i);
