@@ -44,8 +44,6 @@ public class NewDocument {
     private CrdtTree crdtTree = new CrdtTree();
     private int currentUserId = 1; // Or get from authentication
     private Map<Integer, CrdtNode> positionToNodeMap = new HashMap<>();
-    private int logicalPositionCounter = 0;
-//    private TextEditorWebSocketClient webSocketClient;
     private String editorCode;
     private String viewerCode;
     private String sessionId;
@@ -123,6 +121,7 @@ public class NewDocument {
         if (!change.getInserted().isEmpty()) {
             String insertedText = change.getInserted();
             int insertPos = change.getPosition();
+            System.out.println(insertPos);
 
             // Find parent node (node before insertion point)
             CrdtNode parentNode = findParentNode(insertPos);

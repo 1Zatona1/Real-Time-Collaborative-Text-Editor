@@ -74,7 +74,7 @@ public class HelloController {
             mainStage.close();
 
             BrowseDocument controller = loader.getController();
-            controller.setFileContent(userFileContent);
+            controller.setupDocument(userFileContent);
             Scene browseDocScene = new Scene(root);
             browseDocScene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
             browseDocStage.setTitle("Real-Time Collaborative Text Editor");
