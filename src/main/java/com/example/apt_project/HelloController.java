@@ -1,13 +1,9 @@
 package com.example.apt_project;
 
-import Network.NetworkConfig;
-import Network.CustomWebSocketClient;
-import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
@@ -18,7 +14,6 @@ import javafx.stage.Stage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.concurrent.ExecutionException;
 
 public class HelloController {
 
@@ -37,54 +32,19 @@ public class HelloController {
 
     @FXML
     public void handleNewDocBtn() throws IOException {
-        CustomWebSocketClient wsClient = new CustomWebSocketClient(NetworkConfig.SERVER_URL,
-                op -> {}, // Ignore operations during session creation
-                error -> Platform.runLater(() -> showAlert("Error", error)));
-        try {
-            wsClient.connectBlocking();
-            wsClient.send("CREATE_SESSION");
-        } catch (InterruptedException e) {
-            showAlert("Error", "Connection interrupted: " + e.getMessage());
-            return;
-        }
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("NewDocument.fxml"));
+        Parent root = loader.load();
 
-        // Wait briefly for response (simplified, could use a proper callback)
-        try {
-            Thread.sleep(500);
-        } catch (InterruptedException e) {
-            showAlert("Error", "Interrupted while creating session");
-            return;
-        }
+        Stage mainStage = (Stage) newDocBtn.getScene().getWindow();
+        mainStage.close();
 
-        String response = wsClient.getLastMessage();
-        if (response != null && response.startsWith("SESSION_CREATED:")) {
-            String[] parts = response.split(":")[1].split(",");
-            String editorCode = parts[0];
-            String viewerCode = parts[1];
-            String sessionId = parts[2];
-
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("NewDocument.fxml"));
-            Parent root = loader.load();
-            NewDocument controller = loader.getController();
-
-            // Don't close the connection, pass it to the NewDocument controller
-            String uri = "ws://localhost:8080/ws?code=" + editorCode;
-            controller.setSessionWithExistingConnection(editorCode, viewerCode, sessionId, uri, wsClient);
-
-            Stage mainStage = (Stage) newDocBtn.getScene().getWindow();
-            mainStage.close();
-
-            Stage newDocStage = new Stage();
-            Scene newDocScene = new Scene(root, 800, 600);
-            newDocScene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
-            newDocStage.setTitle("Real-Time Collaborative Text Editor");
-            newDocStage.setScene(newDocScene);
-            newDocStage.show();
-            newDocStage.setMaximized(true);
-        } else {
-            wsClient.close(); // Close the connection if session creation failed
-            showAlert("Error", "Failed to create session");
-        }
+        Stage newDocStage = new Stage();
+        Scene newDocScene = new Scene(root, 800, 600);
+        newDocScene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
+        newDocStage.setTitle("Real-Time Collaborative Text Editor");
+        newDocStage.setScene(newDocScene);
+        newDocStage.show();
+        newDocStage.setMaximized(true);
     }
 
     public void handleBrowse() throws IOException {
@@ -118,75 +78,25 @@ public class HelloController {
             browseDocStage.show();
         }
     }
-
-    @FXML
     public void handleJoinBtn() throws IOException {
-        String code = sessionField.getText().trim();
-        if (code.isEmpty()) {
-            showAlert("Error", "Please enter a session code");
-            return;
-        }
+        // validate sessionField text
+        // If correct connect to websocket
+        // If false print an error message
+        // After connecting to websocket, Do the other UI loading. (fxml loading and stage and so on).
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("JoinDocument.fxml"));
+        Parent root = loader.load();
 
-        CustomWebSocketClient wsClient = new CustomWebSocketClient(NetworkConfig.SERVER_URL,
-                op -> {}, // Ignore operations during validation
-                error -> Platform.runLater(() -> showAlert("Error", error)));
-        try
-        {
-            wsClient.connectBlocking();
-            wsClient.send("VALIDATE_CODE:" + code);
-        } catch (InterruptedException e)
-        {
-            showAlert("Error", "Connection interrupted: " + e.getMessage());
-            return;
-        }
+        Stage mainStage = (Stage) newDocBtn.getScene().getWindow();
+        mainStage.close();
 
-        try {
-            Thread.sleep(500);
-        } catch (InterruptedException e)
-        {
-            showAlert("Error", "Interrupted while validating code");
-            return;
-        }
-
-        String response = wsClient.getLastMessage();
-        if (response != null && response.startsWith("VALID_SESSION:"))
-        {
-            String sessionId = response.split(":")[1];
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("NewDocument.fxml"));
-            Parent root = loader.load();
-            NewDocument controller = loader.getController();
-
-            // Don't close the connection, pass it to the NewDocument controller
-            String uri = "ws://localhost:8080/ws?code=" + code;
-            // If it's a viewer code, pass empty string as editor code, otherwise pass the code as editor code
-            String editorCode = code.startsWith("V-") ? "" : code;
-            String viewerCode = code.startsWith("V-") ? code : "";
-            controller.setSessionWithExistingConnection(editorCode, viewerCode, sessionId, uri, wsClient);
-
-            Stage mainStage = (Stage) joinBtn.getScene().getWindow();
-            mainStage.close();
-
-            Stage newDocStage = new Stage();
-            Scene newDocScene = new Scene(root, 800, 600);
-            newDocScene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
-            newDocStage.setTitle("Real-Time Collaborative Text Editor");
-            newDocStage.setScene(newDocScene);
-            newDocStage.show();
-            newDocStage.setMaximized(true);
-        }
-        else
-        {
-            wsClient.close(); // Close the connection if validation failed
-            showAlert("Error", "Invalid session code");
-        }
+        Stage joinDocStage = new Stage();
+        Scene joinDocScene = new Scene(root, 800, 600);
+        joinDocScene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
+        joinDocStage.setTitle("Real-Time Collaborative Text Editor");
+        joinDocStage.setScene(joinDocScene);
+        joinDocStage.show();
+        joinDocStage.setMaximized(true);
     }
 
-    private void showAlert(String title, String message)
-    {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
-    }
+
 }

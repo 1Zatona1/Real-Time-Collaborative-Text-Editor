@@ -21,12 +21,22 @@ public class DocumentRestController {
     }
 
     // Retrieve the current document state (CRDT content) for a session
-    @GetMapping("/{sessionId}/state")
-    public List<Operation> getDocumentState(@PathVariable String sessionId) {
-        List<Operation> operations = sessionService.getDocumentState(sessionId);
-        if (operations == null) {
+    @GetMapping("/{code}/state")
+    public List<Operation> getDocumentState(@PathVariable String code) {
+        SessionService.CodeType type = sessionService.validateCode(code);
+        if (type != SessionService.CodeType.INVALID) {
+            // Handle valid code
+            // --> 2. send to the user that invoked this function the recent list of operations and type
+            String sessionId = sessionService.getSessionIdByCode(code);
+            List<Operation> operations = sessionService.getDocumentState(sessionId);
+            if (operations == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found");
+            }
+            return operations;
+        }
+        else{
+            // Send message that this is an invalid code to tell frontend to invoke error message (Wrong session code entered)
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found");
         }
-        return operations;
     }
 }

@@ -81,6 +81,7 @@ public class BrowseDocument {
     public void handleExport() throws IOException
     {
         fileContent = codeArea.getText();
+        if (fileContent.isEmpty()) return;
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Save File");
 

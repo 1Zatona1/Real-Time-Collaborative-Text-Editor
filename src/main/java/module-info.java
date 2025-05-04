@@ -10,6 +10,8 @@ module com.example.apt_project {
     requires org.fxmisc.richtext;
     requires com.google.gson;
     requires org.java_websocket;
+    requires spring.websocket;
+    requires spring.messaging;
 
     opens com.example.apt_project to javafx.fxml;
     exports com.example.apt_project;

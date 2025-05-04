@@ -1,7 +1,5 @@
 package com.example.apt_project;
 
-
-import Network.CustomWebSocketClient;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -24,12 +22,11 @@ import treeCRDT.NodeId;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.net.URI;
 import java.sql.Timestamp;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 
-
-public class NewDocument {
+public class JoinDocument {
     @FXML
     public VBox sidebar;
     public HBox mainContainer;
@@ -103,10 +100,10 @@ public class NewDocument {
         // Handle deletions
         if (!change.getRemoved().isEmpty()) {
             for (int i = change.getPosition(); i < change.getPosition() + change.getRemoved().length(); i++) {
+                System.out.println("removed");
                 CrdtNode node = positionToNodeMap.get(i);
                 if (node != null) {
                     node.setDeleted(true);
-                    // Add Handling of sending the operation to server
                 }
             }
         }
@@ -131,8 +128,6 @@ public class NewDocument {
 
                 // Update position mapping
                 positionToNodeMap.put(insertPos + i, newNode);
-
-                // Add Handling of sending the operation to server
             }
         }
         crdtTree.printCrdtTree();
@@ -213,5 +208,4 @@ public class NewDocument {
             clipboard.setContent(content);
         }
     }
-
 }

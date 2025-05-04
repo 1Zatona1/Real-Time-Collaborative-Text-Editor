@@ -25,6 +25,12 @@ public class SessionService {
 
     AtomicInteger sessionCounts=new AtomicInteger(0);
 
+    enum CodeType {
+        VIEWER,
+        EDITOR,
+        INVALID
+    };
+
     public Session createDocument() {
         String sessionId = UUID.randomUUID().toString();
         String editCode = UUID.randomUUID().toString().substring(0, 8);  // short random code
@@ -48,6 +54,26 @@ public class SessionService {
             return true;
         }
         return false;
+    }
+
+    public CodeType validateCode(String code) {
+        for (Session session : sessions.values()) {
+            if (session.getEditor_code().equals(code)) {
+                return CodeType.EDITOR;
+            } else if (session.getViewer_code().equals(code)) {
+                return CodeType.VIEWER;
+            }
+        }
+        return CodeType.INVALID;
+    }
+
+    public String getSessionIdByCode(String code) {
+        for (Session session : sessions.values()) {
+            if (session.getEditor_code().equals(code) || session.getViewer_code().equals(code)) {
+                return session.getId();
+            }
+        }
+        return null;
     }
 
 //    public boolean addUser(String sessionId, WebSocketSession session, String role) {
