@@ -66,4 +66,19 @@ public class SessionService {
     public String validateSessionCode(String code) {
         return sessionRoles.getOrDefault(code, null);
     }
+
+    public void broadcastText(String sessionId, String text, WebSocketSession excludeSession) {
+        Map<String, WebSocketSession> sessionUsers = sessions.get(sessionId);
+        if (sessionUsers != null) {
+            for (WebSocketSession userSession : sessionUsers.values()) {
+                try {
+                    if (userSession.isOpen() && !userSession.getId().equals(excludeSession.getId())) {
+                        userSession.sendMessage(new TextMessage(text));
+                    }
+                } catch (IOException e) {
+                    System.out.println("Error broadcasting to " + userSession.getId() + ": " + e.getMessage());
+                }
+            }
+        }
+    }
 }
