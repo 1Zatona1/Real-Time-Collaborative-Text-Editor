@@ -16,7 +16,7 @@ public class DocumentRestController {
 
     // Create a new document session (generate IDs and codes)
     @PostMapping
-    public Session createDocument() {
+    public String createDocument() {
         return sessionService.createDocument();
     }
 

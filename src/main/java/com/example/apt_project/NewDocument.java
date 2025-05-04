@@ -73,7 +73,7 @@ public class NewDocument {
 
         mainContainer.getChildren().add(1, codeArea);
 
-        Session mySession = HttpHelper.createDocument();
+        String mySessionDetails = HttpHelper.createDocument();
         WebSocketHandler myWebSocket = new WebSocketHandler();
         myWebSocket.connectToWebSocket();
     }

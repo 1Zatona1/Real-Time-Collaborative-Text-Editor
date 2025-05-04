@@ -31,7 +31,7 @@ public class SessionService {
         INVALID
     };
 
-    public Session createDocument() {
+    public String createDocument() {
         String sessionId = UUID.randomUUID().toString();
         String editCode = UUID.randomUUID().toString().substring(0, 8);  // short random code
         String viewCode = UUID.randomUUID().toString().substring(0, 8);
@@ -44,7 +44,7 @@ public class SessionService {
         sessionCounts.getAndIncrement();
 
         sessionOperations.put(sessionId, operations);
-        return session;
+        return session.getId() + "," + editCode + "," + viewCode;
     }
 
     public boolean addOperation(String sessionId, Operation operation) {
