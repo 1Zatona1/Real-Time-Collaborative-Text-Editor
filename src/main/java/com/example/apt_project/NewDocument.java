@@ -1,7 +1,6 @@
 package com.example.apt_project;
 
 
-import Network.CustomWebSocketClient;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -24,7 +23,6 @@ import treeCRDT.NodeId;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.net.URI;
 import java.sql.Timestamp;
 import java.util.*;
 
@@ -47,7 +45,7 @@ public class NewDocument {
     private int currentUserId = 1; // Or get from authentication
     private Map<Integer, CrdtNode> positionToNodeMap = new HashMap<>();
     private int logicalPositionCounter = 0;
-    private TextEditorWebSocketClient webSocketClient;
+//    private TextEditorWebSocketClient webSocketClient;
     private String sessionCode;
     private String editorCode;
     private String viewerCode;

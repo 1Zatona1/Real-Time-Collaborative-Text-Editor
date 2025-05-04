@@ -44,7 +44,7 @@ public class JoinDocument {
     private int currentUserId = 1; // Or get from authentication
     private Map<Integer, CrdtNode> positionToNodeMap = new HashMap<>();
     private int logicalPositionCounter = 0;
-    private TextEditorWebSocketClient webSocketClient;
+//    private TextEditorWebSocketClient webSocketClient;
     private String sessionCode;
     private String editorCode;
     private String viewerCode;

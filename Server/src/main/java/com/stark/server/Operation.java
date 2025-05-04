@@ -1,7 +1,5 @@
 package com.stark.server;
 
-import org.fxmisc.richtext.model.PlainTextChange;
-import org.reactfx.Change;
 import treeCRDT.NodeId;
 import java.sql.Timestamp;
 
@@ -11,16 +9,19 @@ public class Operation {
     private int position;
     private int userId;
     private String textChanged;
-
+    private NodeId nodeId; // ID of the affected node
+    private NodeId parentNodeId; // ID of the parent node (for inserts)
 
     public Operation() {}
 
-    public Operation(String type, Timestamp timestamp, int position, int userId) {
+    public Operation(String type, Timestamp timestamp, int position, int userId, String textChanged, NodeId nodeId, NodeId parentNodeId) {
         this.type = type;
         this.timestamp = timestamp;
-        this.userId = userId;
         this.position = position;
+        this.userId = userId;
         this.textChanged = textChanged;
+        this.nodeId = nodeId;
+        this.parentNodeId = parentNodeId;
     }
 
     public String getType() {
@@ -63,4 +64,19 @@ public class Operation {
         this.textChanged = textChanged;
     }
 
+    public NodeId getNodeId() {
+        return nodeId;
+    }
+
+    public void setNodeId(NodeId nodeId) {
+        this.nodeId = nodeId;
+    }
+
+    public NodeId getParentNodeId() {
+        return parentNodeId;
+    }
+
+    public void setParentNodeId(NodeId parentNodeId) {
+        this.parentNodeId = parentNodeId;
+    }
 }
