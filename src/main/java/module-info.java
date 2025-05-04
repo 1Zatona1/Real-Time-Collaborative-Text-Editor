@@ -12,6 +12,7 @@ module com.example.apt_project {
     requires org.java_websocket;
     requires spring.websocket;
     requires spring.messaging;
+    requires spring.web;
 
     opens com.example.apt_project to javafx.fxml;
     exports com.example.apt_project;
