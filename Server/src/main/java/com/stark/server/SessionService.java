@@ -1,183 +1,90 @@
 package com.stark.server;
 
-import com.stark.server.Operation;
 import com.google.gson.Gson;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 public class SessionService {
-    private Map<Integer, List<String>> sessions = new ConcurrentHashMap<>();
-    AtomicInteger newSessionId=new AtomicInteger(1);
+    // Store sessions by ID for quick lookup
+    private Map<String, Session> sessions = new ConcurrentHashMap<>();
 
-    public String createSession() {
+    // Store operations for each session ID
+    private Map<String, List<Operation>> sessionOperations = new ConcurrentHashMap<>();
+
+    private final Gson gson = new Gson();
+
+    AtomicInteger sessionCounts=new AtomicInteger(0);
+
+    public Session createDocument() {
         String sessionId = UUID.randomUUID().toString();
-        String editorCode = "E-" + UUID.randomUUID().toString().substring(0, 8);
-        String viewerCode = "V-" + UUID.randomUUID().toString().substring(0, 8);
-        sessions.put(sessionId, new List<String>() {
-            @Override
-            public int size() {
-                return 0;
-            }
+        String editCode = UUID.randomUUID().toString().substring(0, 8);  // short random code
+        String viewCode = UUID.randomUUID().toString().substring(0, 8);
 
-            @Override
-            public boolean isEmpty() {
-                return false;
-            }
+        Session session = new Session(sessionId, editCode, viewCode);
 
-            @Override
-            public boolean contains(Object o) {
-                return false;
-            }
+        sessions.put(sessionId, session);
 
-            @Override
-            public Iterator<String> iterator() {
-                return null;
-            }
+        List <Operation> operations = new ArrayList<>();
+        sessionCounts.getAndIncrement();
 
-            @Override
-            public Object[] toArray() {
-                return new Object[0];
-            }
-
-            @Override
-            public <T> T[] toArray(T[] a) {
-                return null;
-            }
-
-            @Override
-            public boolean add(String s) {
-                return false;
-            }
-
-            @Override
-            public boolean remove(Object o) {
-                return false;
-            }
-
-            @Override
-            public boolean containsAll(Collection<?> c) {
-                return false;
-            }
-
-            @Override
-            public boolean addAll(Collection<? extends String> c) {
-                return false;
-            }
-
-            @Override
-            public boolean addAll(int index, Collection<? extends String> c) {
-                return false;
-            }
-
-            @Override
-            public boolean removeAll(Collection<?> c) {
-                return false;
-            }
-
-            @Override
-            public boolean retainAll(Collection<?> c) {
-                return false;
-            }
-
-            @Override
-            public void clear() {
-
-            }
-
-            @Override
-            public String get(int index) {
-                return "";
-            }
-
-            @Override
-            public String set(int index, String element) {
-                return "";
-            }
-
-            @Override
-            public void add(int index, String element) {
-
-            }
-
-            @Override
-            public String remove(int index) {
-                return "";
-            }
-
-            @Override
-            public int indexOf(Object o) {
-                return 0;
-            }
-
-            @Override
-            public int lastIndexOf(Object o) {
-                return 0;
-            }
-
-            @Override
-            public ListIterator<String> listIterator() {
-                return null;
-            }
-
-            @Override
-            public ListIterator<String> listIterator(int index) {
-                return null;
-            }
-
-            @Override
-            public List<String> subList(int fromIndex, int toIndex) {
-                return List.of();
-            }
-        });
-        sessionRoles.put(editorCode, sessionId);
-        sessionRoles.put(viewerCode, sessionId);
-        return editorCode + "," + viewerCode + "," + sessionId;
+        sessionOperations.put(sessionId, operations);
+        return session;
     }
 
-    public boolean addUser(String sessionId, WebSocketSession session, String role) {
-        Map<String, WebSocketSession> sessionUsers = sessions.getOrDefault(sessionId, new ConcurrentHashMap<>());
-        if (sessionUsers.size() >= 4) {
-            return false;
+    public boolean addOperation(String sessionId, Operation operation) {
+        List<Operation> operations = sessionOperations.get(sessionId);
+        if (operations != null) {
+            operations.add(operation);
+            return true;
         }
-        sessionUsers.put(session.getId(), session);
-        sessions.put(sessionId, sessionUsers);
-        return true;
+        return false;
     }
 
-    public void removeUser(String sessionId, WebSocketSession session) {
-        Map<String, WebSocketSession> sessionUsers = sessions.get(sessionId);
-        if (sessionUsers != null) {
-            sessionUsers.remove(session.getId());
-            if (sessionUsers.isEmpty()) {
-                sessions.remove(sessionId);
-            }
-        }
+//    public boolean addUser(String sessionId, WebSocketSession session, String role) {
+//        Map<String, WebSocketSession> sessionUsers = sessions.getOrDefault(sessionId, new ConcurrentHashMap<>());
+//        if (sessionUsers.size() >= 4) {
+//            return false;
+//        }
+//        sessionUsers.put(session.getId(), session);
+//        sessions.put(sessionId, sessionUsers);
+//        return true;
+//    }
+//
+//    public void removeUser(String sessionId, WebSocketSession session) {
+//        Map<String, WebSocketSession> sessionUsers = sessions.get(sessionId);
+//        if (sessionUsers != null) {
+//            sessionUsers.remove(session.getId());
+//            if (sessionUsers.isEmpty()) {
+//                sessions.remove(sessionId);
+//            }
+//        }
+//    }
+    public List<Operation> getDocumentState(String sessionId) {
+        return sessionOperations.getOrDefault(sessionId, new ArrayList<>());
     }
-
-    public void broadcastOperation(String sessionId, Operation operation) {
-        Map<String, WebSocketSession> sessionUsers = sessions.get(sessionId);
-        if (sessionUsers != null) {
-            String json = gson.toJson(operation);
-            for (WebSocketSession userSession : sessionUsers.values()) {
-                try {
-                    if (userSession.isOpen()) {
-                        userSession.sendMessage(new TextMessage(json));
-                    }
-                } catch (IOException e) {
-                    System.out.println("Error broadcasting to " + userSession.getId() + ": " + e.getMessage());
-                }
-            }
-        }
-    }
-
-    public String validateSessionCode(String code) {
-        return sessionRoles.getOrDefault(code, null);
-    }
+//    public void broadcastOperation(String sessionId, Operation operation) {
+//        Map<String, WebSocketSession> sessionUsers = sessions.get(sessionId);
+//        if (sessionUsers != null) {
+//            String json = gson.toJson(operation);
+//            for (WebSocketSession userSession : sessionUsers.values()) {
+//                try {
+//                    if (userSession.isOpen()) {
+//                        userSession.sendMessage(new TextMessage(json));
+//                    }
+//                } catch (IOException e) {
+//                    System.out.println("Error broadcasting to " + userSession.getId() + ": " + e.getMessage());
+//                }
+//            }
+//        }
+//    }
 }

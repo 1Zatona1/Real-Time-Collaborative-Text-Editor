@@ -1,20 +1,26 @@
 package com.stark.server;
 
+import org.fxmisc.richtext.model.PlainTextChange;
+import org.reactfx.Change;
 import treeCRDT.NodeId;
+import java.sql.Timestamp;
 
 public class Operation {
-    private String type; // "insert" or "delete"
-    private NodeId nodeId;
-    private char character;
+    private String type;
+    private Timestamp timestamp;
     private int position;
+    private int userId;
+    private String textChanged;
+
 
     public Operation() {}
 
-    public Operation(String type, NodeId nodeId, char character, int position) {
+    public Operation(String type, Timestamp timestamp, int position, int userId) {
         this.type = type;
-        this.nodeId = nodeId;
-        this.character = character;
+        this.timestamp = timestamp;
+        this.userId = userId;
         this.position = position;
+        this.textChanged = textChanged;
     }
 
     public String getType() {
@@ -25,20 +31,12 @@ public class Operation {
         this.type = type;
     }
 
-    public NodeId getNodeId() {
-        return nodeId;
+    public Timestamp getTimestamp() {
+        return timestamp;
     }
 
-    public void setNodeId(NodeId nodeId) {
-        this.nodeId = nodeId;
-    }
-
-    public char getCharacter() {
-        return character;
-    }
-
-    public void setCharacter(char character) {
-        this.character = character;
+    public void setTimestamp(Timestamp timestamp) {
+        this.timestamp = timestamp;
     }
 
     public int getPosition() {
@@ -48,4 +46,21 @@ public class Operation {
     public void setPosition(int position) {
         this.position = position;
     }
+
+    public int getUserId() {
+        return userId;
+    }
+
+    public void setUserId(int userId) {
+        this.userId = userId;
+    }
+
+    public String getTextChanged() {
+        return textChanged;
+    }
+
+    public void setTextChanged(String textChanged) {
+        this.textChanged = textChanged;
+    }
+
 }
