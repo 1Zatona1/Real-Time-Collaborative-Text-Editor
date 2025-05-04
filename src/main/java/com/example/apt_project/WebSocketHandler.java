@@ -17,26 +17,26 @@ import java.util.List;
 public class WebSocketHandler {
     StompSession stompSession;
 
-//    public void connectToWebSocket() {
-//        try {
-//            List<Transport> transports = Collections.singletonList(new WebSocketTransport(new StandardWebSocketClient()));
-//            SockJsClient sockJsClient = new SockJsClient(transports);
-//
-//            WebSocketStompClient stompClient = new WebSocketStompClient(sockJsClient);
-//
-//            MappingJackson2MessageConverter converter = new MappingJackson2MessageConverter();
-//            converter.getObjectMapper().findAndRegisterModules();
-//            stompClient.setMessageConverter(converter);
-//
-//            String url = "ws://localhost:8080/ws";
-//            MyStompSessionHandler sessionHandler = new MyStompSessionHandler();
-//            stompSession = stompClient.connectAsync(url, sessionHandler).get();
-//
-//            System.out.println("Connected to WebSocket server");
-//        } catch (Exception e) {
-//            System.out.println("Websocket connection failed: " + e.getMessage());
-//        }
-//    }
+    public void connectToWebSocket() {
+        try {
+            List<Transport> transports = Collections.singletonList(new WebSocketTransport(new StandardWebSocketClient()));
+            SockJsClient sockJsClient = new SockJsClient(transports);
+
+            WebSocketStompClient stompClient = new WebSocketStompClient(sockJsClient);
+
+            MappingJackson2MessageConverter converter = new MappingJackson2MessageConverter();
+            converter.getObjectMapper().findAndRegisterModules();
+            stompClient.setMessageConverter(converter);
+
+            String url = "ws://localhost:8080/ws";
+            MyStompSessionHandler sessionHandler = new MyStompSessionHandler();
+            stompSession = stompClient.connectAsync(url, sessionHandler).get();
+
+            System.out.println("Connected to WebSocket server");
+        } catch (Exception e) {
+            System.out.println("Websocket connection failed: " + e.getMessage());
+        }
+    }
 
 
 }
