@@ -46,7 +46,6 @@ public class NewDocument {
     private Map<Integer, CrdtNode> positionToNodeMap = new HashMap<>();
     private int logicalPositionCounter = 0;
 //    private TextEditorWebSocketClient webSocketClient;
-    private String sessionCode;
     private String editorCode;
     private String viewerCode;
     private String sessionId;
@@ -76,6 +75,15 @@ public class NewDocument {
         String mySessionDetails = HttpHelper.createDocument();
         WebSocketHandler myWebSocket = new WebSocketHandler();
         myWebSocket.connectToWebSocket();
+
+        String[] parts = mySessionDetails.split(",");
+
+        sessionId = parts[0];
+        editorCode = parts[1];
+        viewerCode = parts[2];
+
+        editorCodeText.setText(editorCode);
+        viewerCodeText.setText(viewerCode);
     }
 
     public void handleBackBtn() throws IOException

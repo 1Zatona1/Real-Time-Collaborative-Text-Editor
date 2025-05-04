@@ -33,8 +33,8 @@ public class SessionService {
 
     public String createDocument() {
         String sessionId = UUID.randomUUID().toString();
-        String editCode = UUID.randomUUID().toString().substring(0, 8);  // short random code
-        String viewCode = UUID.randomUUID().toString().substring(0, 8);
+        String editCode = "E-" + UUID.randomUUID().toString().substring(0, 8);  // short random code
+        String viewCode = "V-" + UUID.randomUUID().toString().substring(0, 8);
 
         Session session = new Session(sessionId, editCode, viewCode);
 
