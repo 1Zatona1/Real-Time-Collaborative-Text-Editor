@@ -10,7 +10,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * Service for managing Document instances
  */
 @Service
-public class DocumentService {
+public class DocumentService
+{
     private final Map<String, Document> documents = new ConcurrentHashMap<>();
 
     /**

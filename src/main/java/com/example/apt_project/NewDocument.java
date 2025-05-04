@@ -1,6 +1,8 @@
 package com.example.apt_project;
 
 import Network.CustomWebSocketClient;
+import Network.DocumentWebSocketHandler;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -39,16 +41,25 @@ public class NewDocument {
     public Button copyViewerCodeBtn;
     private int currentUserId = 1; // Or get from authentication
     private TextEditorWebSocketClient webSocketClient;
+    private DocumentWebSocketHandler documentHandler;
     private String sessionCode;
     private String editorCode;
     private String viewerCode;
     private String sessionId;
     private boolean ignoreIncoming = false;
 
-    public void setSessionWithExistingConnection(String editorCode, String viewerCode, String sessionId, String uri, CustomWebSocketClient existingClient) {
+    /**
+     * Sets up the session with an existing DocumentWebSocketHandler
+     * @param editorCode The editor code for the document
+     * @param viewerCode The viewer code for the document
+     * @param documentId The document ID
+     * @param handler The DocumentWebSocketHandler to use
+     */
+    public void setSessionWithExistingConnection(String editorCode, String viewerCode, String documentId, DocumentWebSocketHandler handler) {
         this.editorCode = editorCode;
         this.viewerCode = viewerCode;
-        this.sessionId = sessionId;
+        this.sessionId = documentId;
+        this.documentHandler = handler;
         // Use the appropriate code for connection - if editorCode is empty, use viewerCode
         this.sessionCode = editorCode.isEmpty() ? viewerCode : editorCode;
 
@@ -60,21 +71,35 @@ public class NewDocument {
             viewerCodeText.setText(viewerCode);
         }
 
-        // Create a new TextEditorWebSocketClient with the same URI
-        try {
-            // We don't need to close the existing client, just create a new one
-            webSocketClient = new TextEditorWebSocketClient(new URI(uri), msg -> {
-                ignoreIncoming = true;
-                
-                // Directly update the UI with the received text
-                codeArea.replaceText(msg);
-                
-                ignoreIncoming = false;
-            });
+        // The handler is already connected to the document in HelloController
+    }
 
-            webSocketClient.connect();
-        } catch (Exception e) {
-            e.printStackTrace();
+    /**
+     * Sets up the session with an existing CustomWebSocketClient (legacy method)
+     * @param editorCode The editor code for the document
+     * @param viewerCode The viewer code for the document
+     * @param sessionId The session ID
+     * @param uri The WebSocket URI
+     * @param existingClient The existing CustomWebSocketClient
+     * @deprecated Use setSessionWithExistingConnection(String, String, String, DocumentWebSocketHandler) instead
+     */
+    @Deprecated
+    public void setSessionWithExistingConnection(String editorCode, String viewerCode, String sessionId, String uri, CustomWebSocketClient existingClient) {
+        // Create a DocumentWebSocketHandler instead
+        DocumentWebSocketHandler handler = new DocumentWebSocketHandler(
+                message -> {
+                    ignoreIncoming = true;
+                    codeArea.replaceText(message);
+                    ignoreIncoming = false;
+                },
+                error -> System.err.println("WebSocket error: " + error)
+        );
+
+        // Connect to the document using the new handler
+        if (handler.connect(sessionId)) {
+            setSessionWithExistingConnection(editorCode, viewerCode, sessionId, handler);
+        } else {
+            System.err.println("Failed to connect to document with ID: " + sessionId);
         }
     }
 
@@ -96,27 +121,36 @@ public class NewDocument {
         if (sessionCode == null) {
             // Generate random 6-digit code
             sessionCode = String.valueOf(new Random().nextInt(900000) + 100000);
-            //sessionCode = "999999"; // For testing purposes
             editorCode = sessionCode;
             viewerCode = sessionCode;
 
             if (editorCodeText != null) {
                 editorCodeText.setText(sessionCode); // Label on screen
             }
+            if (viewerCodeText != null) {
+                viewerCodeText.setText(sessionCode); // Label on screen
+            }
 
-            // Connect to WebSocket
+            // Create a new document using HTTPHelper
             try {
-                String uri = "ws://localhost:8080/ws?code=" + sessionCode;
-                webSocketClient = new TextEditorWebSocketClient(new URI(uri), msg -> {
-                    ignoreIncoming = true;
-                    
-                    // Directly update the UI with the received text
-                    codeArea.replaceText(msg);
-                    
-                    ignoreIncoming = false;
-                });
+                // Create a DocumentWebSocketHandler for WebSocket communication
+                documentHandler = new DocumentWebSocketHandler(
+                        message -> {
+                            ignoreIncoming = true;
+                            codeArea.replaceText(message);
+                            ignoreIncoming = false;
+                        },
+                        error -> System.err.println("WebSocket error: " + error)
+                );
 
-                webSocketClient.connect();
+                // For testing purposes, we'll use the session code as the document ID
+                sessionId = sessionCode;
+
+                // Connect to the document
+                boolean connected = documentHandler.connect(sessionId);
+                if (!connected) {
+                    System.err.println("Failed to connect to document with ID: " + sessionId);
+                }
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -143,9 +177,16 @@ public class NewDocument {
 
     private void handleTextChange(PlainTextChange change) {
         // Only send changes to the server if they weren't caused by receiving a message
-        if (webSocketClient != null && webSocketClient.isOpen() && !ignoreIncoming) {
-            String currentText = codeArea.getText();
-            webSocketClient.send(currentText);
+        if (!ignoreIncoming && documentHandler != null && documentHandler.isConnected()) {
+            // For simplicity, we're just handling insertions and deletions directly
+            // In a real implementation, you would track the changes more precisely
+            if (change.getInserted().length() > 0 && change.getRemoved().length() == 0) {
+                // This is an insertion
+                documentHandler.insertText(change.getInserted(), change.getPosition());
+            } else if (change.getRemoved().length() > 0) {
+                // This is a deletion
+                documentHandler.deleteText(change.getPosition(), change.getPosition() + change.getRemoved().length());
+            }
         }
     }
 

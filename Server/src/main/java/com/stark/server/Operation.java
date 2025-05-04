@@ -2,7 +2,8 @@ package com.stark.server;
 
 import treeCRDT.NodeId;
 
-public class Operation {
+public class Operation
+{
     private String type; // "insert" or "delete"
     private NodeId nodeId;
     private char character;
@@ -10,7 +11,8 @@ public class Operation {
 
     public Operation() {}
 
-    public Operation(String type, NodeId nodeId, char character, int position) {
+    public Operation(String type, NodeId nodeId, char character, int position)
+    {
         this.type = type;
         this.nodeId = nodeId;
         this.character = character;

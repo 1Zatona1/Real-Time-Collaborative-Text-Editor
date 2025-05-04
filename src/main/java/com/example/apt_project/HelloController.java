@@ -2,6 +2,8 @@ package com.example.apt_project;
 
 import Network.NetworkConfig;
 import Network.CustomWebSocketClient;
+import Network.DocumentWebSocketHandler;
+import Network.HTTPHelper;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -18,6 +20,7 @@ import javafx.stage.Stage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 public class HelloController {
@@ -37,39 +40,38 @@ public class HelloController {
 
     @FXML
     public void handleNewDocBtn() throws IOException {
-        CustomWebSocketClient wsClient = new CustomWebSocketClient(NetworkConfig.SERVER_URL,
-                op -> {}, // Ignore operations during session creation
-                error -> Platform.runLater(() -> showAlert("Error", error)));
         try {
-            wsClient.connectBlocking();
-            wsClient.send("CREATE_SESSION");
-        } catch (InterruptedException e) {
-            showAlert("Error", "Connection interrupted: " + e.getMessage());
-            return;
-        }
+            // Create a new document using HTTPHelper
+            Map<String, String> documentInfo = HTTPHelper.createDocument();
 
-        // Wait briefly for response (simplified, could use a proper callback)
-        try {
-            Thread.sleep(500);
-        } catch (InterruptedException e) {
-            showAlert("Error", "Interrupted while creating session");
-            return;
-        }
+            String documentId = documentInfo.get("documentId");
+            String editorCode = documentInfo.get("editorCode");
+            String viewerCode = documentInfo.get("viewerCode");
 
-        String response = wsClient.getLastMessage();
-        if (response != null && response.startsWith("SESSION_CREATED:")) {
-            String[] parts = response.split(":")[1].split(",");
-            String editorCode = parts[0];
-            String viewerCode = parts[1];
-            String sessionId = parts[2];
+            if (documentId == null || editorCode == null || viewerCode == null) {
+                showAlert("Error", "Failed to create document: Missing information from server");
+                return;
+            }
+
+            // Create a DocumentWebSocketHandler for WebSocket communication
+            DocumentWebSocketHandler documentHandler = new DocumentWebSocketHandler(
+                    message -> {}, // Message handler will be set in NewDocument
+                    error -> Platform.runLater(() -> showAlert("Error", error))
+            );
+
+            // Connect to the document
+            boolean connected = documentHandler.connect(documentId);
+            if (!connected) {
+                showAlert("Error", "Failed to connect to document");
+                return;
+            }
 
             FXMLLoader loader = new FXMLLoader(getClass().getResource("NewDocument.fxml"));
             Parent root = loader.load();
             NewDocument controller = loader.getController();
 
-            // Don't close the connection, pass it to the NewDocument controller
-            String uri = "ws://localhost:8080/ws?code=" + editorCode;
-            controller.setSessionWithExistingConnection(editorCode, viewerCode, sessionId, uri, wsClient);
+            // Pass the document information and handler to the NewDocument controller
+            controller.setSessionWithExistingConnection(editorCode, viewerCode, documentId, documentHandler);
 
             Stage mainStage = (Stage) newDocBtn.getScene().getWindow();
             mainStage.close();
@@ -81,9 +83,8 @@ public class HelloController {
             newDocStage.setScene(newDocScene);
             newDocStage.show();
             newDocStage.setMaximized(true);
-        } else {
-            wsClient.close(); // Close the connection if session creation failed
-            showAlert("Error", "Failed to create session");
+        } catch (IOException e) {
+            showAlert("Error", "Failed to create document: " + e.getMessage());
         }
     }
 
@@ -127,41 +128,36 @@ public class HelloController {
             return;
         }
 
-        CustomWebSocketClient wsClient = new CustomWebSocketClient(NetworkConfig.SERVER_URL,
-                op -> {}, // Ignore operations during validation
-                error -> Platform.runLater(() -> showAlert("Error", error)));
-        try
-        {
-            wsClient.connectBlocking();
-            wsClient.send("VALIDATE_CODE:" + code);
-        } catch (InterruptedException e)
-        {
-            showAlert("Error", "Connection interrupted: " + e.getMessage());
-            return;
-        }
-
+        // Use HTTPHelper to validate the session code and get the document ID
         try {
-            Thread.sleep(500);
-        } catch (InterruptedException e)
-        {
-            showAlert("Error", "Interrupted while validating code");
-            return;
-        }
+            // Validate the session code and get the document ID
+            Map<String, String> validationResult = HTTPHelper.validateSessionCode(code);
+            String documentId = validationResult.get("documentId");
+            boolean isEditor = Boolean.parseBoolean(validationResult.get("isEditor"));
 
-        String response = wsClient.getLastMessage();
-        if (response != null && response.startsWith("VALID_SESSION:"))
-        {
-            String sessionId = response.split(":")[1];
+            // Set the editor and viewer codes based on the validation result
+            String editorCode = isEditor ? code : "";
+            String viewerCode = isEditor ? "" : code;
+
+            // Create a DocumentWebSocketHandler for WebSocket communication
+            DocumentWebSocketHandler documentHandler = new DocumentWebSocketHandler(
+                    message -> {}, // Message handler will be set in NewDocument
+                    error -> Platform.runLater(() -> showAlert("Error", error))
+            );
+
+            // Connect to the document
+            boolean connected = documentHandler.connect(documentId);
+            if (!connected) {
+                showAlert("Error", "Failed to connect to document");
+                return;
+            }
+
             FXMLLoader loader = new FXMLLoader(getClass().getResource("NewDocument.fxml"));
             Parent root = loader.load();
             NewDocument controller = loader.getController();
 
-            // Don't close the connection, pass it to the NewDocument controller
-            String uri = "ws://localhost:8080/ws?code=" + code;
-            // If it's a viewer code, pass empty string as editor code, otherwise pass the code as editor code
-            String editorCode = code.startsWith("V-") ? "" : code;
-            String viewerCode = code.startsWith("V-") ? code : "";
-            controller.setSessionWithExistingConnection(editorCode, viewerCode, sessionId, uri, wsClient);
+            // Pass the document information and handler to the NewDocument controller
+            controller.setSessionWithExistingConnection(editorCode, viewerCode, documentId, documentHandler);
 
             Stage mainStage = (Stage) joinBtn.getScene().getWindow();
             mainStage.close();
@@ -173,11 +169,8 @@ public class HelloController {
             newDocStage.setScene(newDocScene);
             newDocStage.show();
             newDocStage.setMaximized(true);
-        }
-        else
-        {
-            wsClient.close(); // Close the connection if validation failed
-            showAlert("Error", "Invalid session code");
+        } catch (Exception e) {
+            showAlert("Error", "Failed to join document: " + e.getMessage());
         }
     }
 
