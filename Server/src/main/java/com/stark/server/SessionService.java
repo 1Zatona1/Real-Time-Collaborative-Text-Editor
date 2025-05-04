@@ -7,21 +7,135 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.io.IOException;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 public class SessionService {
-    private final Map<String, Map<String, WebSocketSession>> sessions = new ConcurrentHashMap<>();
-    private final Map<String, String> sessionRoles = new ConcurrentHashMap<>();
-    private final Gson gson = new Gson();
+    private Map<Integer, List<String>> sessions = new ConcurrentHashMap<>();
+    AtomicInteger newSessionId=new AtomicInteger(1);
 
     public String createSession() {
         String sessionId = UUID.randomUUID().toString();
         String editorCode = "E-" + UUID.randomUUID().toString().substring(0, 8);
         String viewerCode = "V-" + UUID.randomUUID().toString().substring(0, 8);
-        sessions.put(sessionId, new ConcurrentHashMap<>());
+        sessions.put(sessionId, new List<String>() {
+            @Override
+            public int size() {
+                return 0;
+            }
+
+            @Override
+            public boolean isEmpty() {
+                return false;
+            }
+
+            @Override
+            public boolean contains(Object o) {
+                return false;
+            }
+
+            @Override
+            public Iterator<String> iterator() {
+                return null;
+            }
+
+            @Override
+            public Object[] toArray() {
+                return new Object[0];
+            }
+
+            @Override
+            public <T> T[] toArray(T[] a) {
+                return null;
+            }
+
+            @Override
+            public boolean add(String s) {
+                return false;
+            }
+
+            @Override
+            public boolean remove(Object o) {
+                return false;
+            }
+
+            @Override
+            public boolean containsAll(Collection<?> c) {
+                return false;
+            }
+
+            @Override
+            public boolean addAll(Collection<? extends String> c) {
+                return false;
+            }
+
+            @Override
+            public boolean addAll(int index, Collection<? extends String> c) {
+                return false;
+            }
+
+            @Override
+            public boolean removeAll(Collection<?> c) {
+                return false;
+            }
+
+            @Override
+            public boolean retainAll(Collection<?> c) {
+                return false;
+            }
+
+            @Override
+            public void clear() {
+
+            }
+
+            @Override
+            public String get(int index) {
+                return "";
+            }
+
+            @Override
+            public String set(int index, String element) {
+                return "";
+            }
+
+            @Override
+            public void add(int index, String element) {
+
+            }
+
+            @Override
+            public String remove(int index) {
+                return "";
+            }
+
+            @Override
+            public int indexOf(Object o) {
+                return 0;
+            }
+
+            @Override
+            public int lastIndexOf(Object o) {
+                return 0;
+            }
+
+            @Override
+            public ListIterator<String> listIterator() {
+                return null;
+            }
+
+            @Override
+            public ListIterator<String> listIterator(int index) {
+                return null;
+            }
+
+            @Override
+            public List<String> subList(int fromIndex, int toIndex) {
+                return List.of();
+            }
+        });
         sessionRoles.put(editorCode, sessionId);
         sessionRoles.put(viewerCode, sessionId);
         return editorCode + "," + viewerCode + "," + sessionId;
