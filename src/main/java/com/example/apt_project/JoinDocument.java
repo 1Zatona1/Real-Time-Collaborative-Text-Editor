@@ -49,7 +49,6 @@ public class JoinDocument {
     private CrdtTree crdtTree = new CrdtTree();
     private int currentUserId = 2; // Or get from authentication
     private Map<Integer, CrdtNode> positionToNodeMap = new HashMap<>();
-    private int logicalPositionCounter = 0;
     private String sessionCode;
     private String editorCode;
     private String viewerCode;
@@ -111,7 +110,10 @@ public class JoinDocument {
                 // Find parent (node before current position)
                 CrdtNode parentNode = findParentNode(position);
 
-                CrdtNode newNode = new CrdtNode(nodeId, character.charAt(0));
+                // Make sure we're dealing with a single character
+                char charToInsert = character.length() > 0 ? character.charAt(0) : ' ';
+
+                CrdtNode newNode = new CrdtNode(nodeId, charToInsert);
                 crdtTree.addChild(parentNode != null ? parentNode.getId() : crdtTree.getRoot().getId(), newNode);
 
                 // Shift positionToNodeMap right from position
@@ -178,6 +180,10 @@ public class JoinDocument {
 
                             if (parts.length < 5) return; // Skip invalid messages
 
+                            // Check if this message is from this user
+                            int userId = Integer.parseInt(parts[3]);
+                            if (userId == currentUserId) return; // Skip our own messages
+
                             Platform.runLater(() -> {
                                 isProcessingRemoteChange = true;
                                 try {
@@ -209,7 +215,8 @@ public class JoinDocument {
 
     private void processInsertOperation(String[] parts) {
         int insertPos = Integer.parseInt(parts[1]);
-        char c = parts[2].charAt(0);
+        // Ensure we're processing just a single character
+        char c = parts[2].length() > 0 ? parts[2].charAt(0) : ' ';
         int userId = Integer.parseInt(parts[3]);
         Timestamp ts = Timestamp.valueOf(parts[4]);
         NodeId nodeId = new NodeId(userId, ts);
@@ -217,14 +224,12 @@ public class JoinDocument {
 
         // Shift existing nodes forward to make space
         int sizeBefore = positionToNodeMap.size();
-        System.out.println("Before shifting: " + positionToNodeMap);
         for (int i = sizeBefore - 1; i >= insertPos; i--) {
             CrdtNode shiftedNode = positionToNodeMap.get(i);
             if (shiftedNode != null) {
                 positionToNodeMap.put(i + 1, shiftedNode);
             }
         }
-        System.out.println("After shifting: " + positionToNodeMap);
 
         // Add to CRDT tree
         CrdtNode parentNode = findParentNode(insertPos);
@@ -232,6 +237,8 @@ public class JoinDocument {
 
         // Insert into position map
         positionToNodeMap.put(insertPos, newNode);
+
+        System.out.println("Processed insert: '" + c + "' at position " + insertPos);
     }
 
     private void processDeleteOperation(String[] parts) {
@@ -259,6 +266,8 @@ public class JoinDocument {
         for (int i = sizeBefore - removedLen; i < sizeBefore; i++) {
             positionToNodeMap.remove(i);
         }
+
+        System.out.println("Processed delete: '" + removed + "' at position " + deletePos);
     }
 
     public void handleBackBtn() throws IOException {
@@ -320,14 +329,13 @@ public class JoinDocument {
         // ----- Handle Insertions -----
         if (!change.getInserted().isEmpty()) {
             String insertedText = change.getInserted();
-            int insertedLen = insertedText.length();
 
             // Shift existing nodes forward to make space
             int sizeBefore = positionToNodeMap.size();
             for (int i = sizeBefore - 1; i >= insertPos; i--) {
                 CrdtNode shiftedNode = positionToNodeMap.get(i);
                 if (shiftedNode != null) {
-                    positionToNodeMap.put(i + insertedLen, shiftedNode);
+                    positionToNodeMap.put(i + insertedText.length(), shiftedNode);
                 }
             }
 
@@ -352,7 +360,9 @@ public class JoinDocument {
 
                 parentNode = newNode; // Update parent for next character
 
+                // Send one character at a time with the exact position
                 String Change = "insert," + (insertPos + i) + "," + c + "," + currentUserId + "," + ts;
+                System.out.println("Sending change: " + Change);
                 myWebSocket.updateDocument(sessionId, Change);
             }
         }

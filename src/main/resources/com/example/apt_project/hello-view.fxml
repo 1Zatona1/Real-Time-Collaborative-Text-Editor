@@ -46,7 +46,13 @@
 
     <!-- TextField (Only in the Join Section) -->
     <TextField fx:id="sessionField" GridPane.columnIndex="2" GridPane.halignment="CENTER" GridPane.rowIndex="3" />
-
+    <Label fx:id="errorLabel"
+           text="Invalid session code. Please try again."
+           visible="false"
+           style="-fx-text-fill: red; -fx-font-size: 12px;"
+           GridPane.columnIndex="2"
+           GridPane.halignment="CENTER"
+           GridPane.rowIndex="4" />
     <!-- Buttons (Aligned in the same row) -->
     <Button fx:id="newDocBtn" onAction="#handleNewDocBtn" text="New Document" GridPane.columnIndex="0" GridPane.halignment="CENTER" GridPane.rowIndex="4" styleClass="btn-success"/>
 

@@ -30,6 +30,9 @@ public class HelloController {
     public TextField sessionField;
     public Button newDocBtn;
     public Label sessionLabel;
+
+    @FXML
+    private Label errorLabel;
     public Label titleLabel;
     public File userFile;
     public String userFileContent;
@@ -91,6 +94,8 @@ public class HelloController {
         List<String> allOperations = HttpHelper.getListOfOperation(sessionField.getText());
         if (allOperations == null) {
             // Code to handle error message
+            errorLabel.setText("Invalid session code. Please try again.");
+            errorLabel.setVisible(true);
             return;
         }
         String sessionId = HttpHelper.getDocumentIdByCode(sessionField.getText());
@@ -118,12 +123,4 @@ public class HelloController {
 
     }
 
-    private void showAlert(String title, String message)
-    {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
-    }
 }
