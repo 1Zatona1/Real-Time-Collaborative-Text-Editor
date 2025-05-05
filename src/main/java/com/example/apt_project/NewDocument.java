@@ -41,6 +41,9 @@ public class NewDocument {
     public Label viewerCodeText;
     public Button copyEditorCodeBtn;
     public Button copyViewerCodeBtn;
+    public Button UndoBtn;
+    public Button RedoBtn;
+
     private CrdtTree crdtTree = new CrdtTree();
     private int currentUserId = 1; // Or get from authentication
     private Map<Integer, CrdtNode> positionToNodeMap = new HashMap<>();
@@ -252,5 +255,19 @@ public class NewDocument {
             clipboard.setContent(content);
         }
     }
+
+    public void HandleUndo()
+    {
+        crdtTree.undo();
+        updateUIFromCRDT();
+    }
+
+    public void HandleRedo()
+    {
+        crdtTree.redo();
+        updateUIFromCRDT();
+    }
+
+
 
 }

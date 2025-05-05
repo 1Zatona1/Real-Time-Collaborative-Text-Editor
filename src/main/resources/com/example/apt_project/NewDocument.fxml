@@ -18,6 +18,9 @@
          <VBox spacing="10" styleClass="button-group">
             <Button fx:id="exportBtn" mnemonicParsing="false" onAction="#handleExport" text="Export Document" styleClass="btn-primary" />
             <Button fx:id="backBtn" mnemonicParsing="false" onAction="#handleBackBtn" text="Back to Main" styleClass="btn-danger" />
+            <!-- New Undo and Redo Buttons -->
+            <Button fx:id="undoBtn" mnemonicParsing="false" onAction="#HandleUndo" text="Undo" styleClass="btn-secondary" />
+            <Button fx:id="redoBtn" mnemonicParsing="false" onAction="#HandleRedo" text="Redo" styleClass="btn-secondary" />
          </VBox>
 
          <!-- Code Sharing Section -->
