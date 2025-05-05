@@ -16,6 +16,7 @@ public class CrdtTree {
 
     private Stack<Operation> undoStack = new Stack<>();
     private Stack<Operation> redoStack = new Stack<>();
+    private boolean isRedoing = false;
 
     public Map<NodeId, CrdtNode> getNodeIndex() {
         return nodeIndex;
@@ -205,76 +206,7 @@ public class CrdtTree {
         }
     }
 
-    public synchronized void undo()
-    {
-        if (undoStack.isEmpty()) return;
 
-        Operation op = undoStack.pop();
-        CrdtNode node = nodeIndex.get(op.getNodeId());
-        if (node == null) return;
-
-        List<TreeChange> changes = new ArrayList<>();
-        if ("INSERT".equals(op.getType()))
-        {
-            node.setDeleted(true);
-            changes.add(new TreeChange(TreeChange.Type.DELETE, op.getPosition(), op.getTextChanged()));
-        } else if ("DELETE".equals(op.getType()))
-        {
-            // Undo delete: restore node
-            node.setDeleted(false);
-            changes.add(new TreeChange(TreeChange.Type.INSERT, op.getPosition(), op.getTextChanged()));
-        }
-
-        // Update state
-        lastFlattenedState = flattenTree();
-        updatePositionMap(lastFlattenedState);
-        cachedText = null; // Invalidate cache
-        redoStack.push(op); // Enable redo
-        notifyChanges(changes);
-    }
-
-    public synchronized void redo()
-    {
-        if (redoStack.isEmpty()) return;
-
-        Operation op = redoStack.pop();
-        CrdtNode node = nodeIndex.get(op.getNodeId());
-        List<TreeChange> changes = new ArrayList<>();
-
-        if ("INSERT".equals(op.getType()))
-        {
-            // Redo insert: restore node
-            if (node != null) {
-                node.setDeleted(false);
-            } else {
-                // Re-add node if it was removed
-                CrdtNode parent = nodeIndex.get(op.getParentNodeId());
-                if (parent != null)
-                {
-                    CrdtNode newNode = new CrdtNode(op.getNodeId(), op.getTextChanged().charAt(0));
-                    parent.addChild(newNode);
-                    nodeIndex.put(newNode.getId(), newNode);
-                }
-            }
-            changes.add(new TreeChange(TreeChange.Type.INSERT, op.getPosition(), op.getTextChanged()));
-        }
-        else if ("DELETE".equals(op.getType()))
-        {
-            // Redo delete: mark node as deleted
-            if (node != null)
-            {
-                node.setDeleted(true);
-                changes.add(new TreeChange(TreeChange.Type.DELETE, op.getPosition(), op.getTextChanged()));
-            }
-        }
-
-        // Update state
-        lastFlattenedState = flattenTree();
-        updatePositionMap(lastFlattenedState);
-        cachedText = null; // Invalidate cache
-        undoStack.push(op); // Enable undo
-        notifyChanges(changes);
-    }
 
     private int getPositionForNode(CrdtNode node)
     {
@@ -343,4 +275,118 @@ public class CrdtTree {
             printNode(child, depth + 1, lastChildMap);
         }
     }
+
+    public synchronized void undo()
+    {
+        if (undoStack.isEmpty())
+        {
+            System.out.println("[undo] undoStack is empty, nothing to do.");
+            return;
+        }
+        Operation op = undoStack.pop();
+
+        redoStack.push(op); // Enable redo
+        System.out.println("[undo] Pushed op back onto redoStack; redoStack size=" + redoStack.size());
+
+
+        CrdtNode node = nodeIndex.get(op.getNodeId());
+        if (node == null) return;
+
+        List<TreeChange> changes = new ArrayList<>();
+        if ("INSERT".equals(op.getType()))
+        {
+            node.setDeleted(true);
+            changes.add(new TreeChange(TreeChange.Type.DELETE, op.getPosition(), op.getTextChanged()));
+        } else if ("DELETE".equals(op.getType()))
+        {
+            // Undo delete: restore node
+            node.setDeleted(false);
+            changes.add(new TreeChange(TreeChange.Type.INSERT, op.getPosition(), op.getTextChanged()));
+        }
+
+        // Update state
+        lastFlattenedState = flattenTree();
+        updatePositionMap(lastFlattenedState);
+        cachedText = null; // Invalidate cache
+        notifyChanges(changes);
+    }
+
+    public synchronized void redo()
+    {
+        // 1) Bail out if there’s nothing to redo
+
+        try {
+            isRedoing = true;
+
+            if (redoStack.isEmpty()) {
+                System.out.println("[redo] redoStack is empty, nothing to do.");
+                return;
+            }
+
+            // 2) Pop the next op and log it
+            Operation op = redoStack.pop();
+            String type = op.getType() != null ? op.getType().toUpperCase() : "<null>";
+            System.out.printf("[redo] Popped op: type=%s, nodeId=%s, parentId=%s, pos=%d, char=%s%n",
+                    type,
+                    op.getNodeId(),
+                    op.getParentNodeId(),
+                    op.getPosition(),
+                    op.getTextChanged());
+
+            // 3) Apply it
+            CrdtNode node = nodeIndex.get(op.getNodeId());
+            if (node == null) {
+                System.out.println("[redo] Node not found in index – recreating it.");
+                node = new CrdtNode(op.getNodeId(), op.getCharacter());
+                nodeIndex.put(node.getId(), node);
+            }
+
+            switch (type) {
+                case "INSERT":
+                    // Undelete + ensure it’s attached
+                    node.setDeleted(false);
+                    CrdtNode parent = nodeIndex.get(op.getParentNodeId());
+                    if (parent == null && op.getParentNodeId().getUserId() == 0) {
+                        parent = root;
+                    }
+                    if (parent != null && !parent.getChildren().contains(node))
+                    {
+                        parent.addChild(node);
+                        System.out.println("[redo] Reattached node under parent " + parent.getId());
+                    }
+                    System.out.println("[redo] Marked node as visible");
+                    break;
+
+                case "DELETE":
+                    node.setDeleted(true);
+                    System.out.println("[redo] Marked node as deleted");
+                    break;
+
+                default:
+                    System.out.println("[redo] Unknown op type: " + type + "; pushing back and exiting.");
+                    redoStack.push(op);
+                    return;
+            }
+
+            // 4) Push back onto undoStack
+            undoStack.push(op);
+            System.out.println("[redo] Pushed op back onto undoStack; undoStack size=" + undoStack.size());
+
+            // 5) Refresh state and fire diff
+            lastFlattenedState = flattenTree();
+            updatePositionMap(lastFlattenedState);
+            cachedText = null;
+            List<TreeChange> changes = getChangesSinceLastUpdate();
+            System.out.println("[redo] Computed changes: " + changes);
+            notifyChanges(changes);
+            System.out.println("[redo] Done.");
+
+
+        } finally {
+            // ALWAYS reset this flag, even on early return
+            isRedoing = false;
+        }
+    }
+
+
 }
