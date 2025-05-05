@@ -10,6 +10,8 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 
+import java.sql.Timestamp;
+
 
 @Controller
 public class WebSocketController {
@@ -21,21 +23,39 @@ public class WebSocketController {
         this.messagingTemplate = messagingTemplate;
     }
 
+    private Operation parseOperation(String str) {
+        String[] parts = str.split(",", -1); // -1 to include trailing empty strings
+        Operation op = new Operation();
+        op.setType(parts[0]);
+        op.setPosition(Integer.parseInt(parts[1]));
+        op.setTextChanged(parts[2]);
+        op.setUserId(Integer.parseInt(parts[3]));
+        op.setTimestamp(Timestamp.valueOf(parts[4]));
+        return op;
+    }
+
     @MessageMapping("/update/{sessionId}")
-    public void updateDocument(@DestinationVariable String sessionId, @Payload Operation operation) {
+    public void updateDocument(@DestinationVariable String sessionId, @Payload String operationStr) {
         // Add the operation to the session history
+        Operation operation = parseOperation(operationStr);
         boolean success = sessionService.addOperation(sessionId, operation);
         if (success) {
             // Broadcast the operation to all clients subscribed to this session
             messagingTemplate.convertAndSend("/topic/document/" + sessionId, operation);
 
-            System.out.println("Broadcast operation: " + operation.getType() +
-                    " at position " + operation.getPosition() +
-                    " for session " + sessionId);
+            System.out.println("Broadcast operation: " + operationStr);
         } else {
             System.err.println("Failed to add operation - session not found: " + sessionId);
         }
     }
 
+    @MessageMapping("/userEvent/{sessionId}")
+    public void userEvent(@DestinationVariable String sessionId, @Payload String eventStr) {
+        String[] parts = eventStr.split(",", -1);
+        UserEvent event = new UserEvent(parts[0], Integer.parseInt(parts[1]), parts[2]);
+        sessionService.handleUserEvent(sessionId, event);
+
+        messagingTemplate.convertAndSend("/topic/userEvent/" + sessionId, eventStr);
+    }
 
 }

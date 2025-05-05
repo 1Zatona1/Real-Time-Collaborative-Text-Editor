@@ -36,7 +36,7 @@ public class SessionService {
         String editCode = "E-" + UUID.randomUUID().toString().substring(0, 8);  // short random code
         String viewCode = "V-" + UUID.randomUUID().toString().substring(0, 8);
 
-        Session session = new Session(sessionId, editCode, viewCode);
+        Session session = new Session(sessionId, viewCode, editCode);
 
         sessions.put(sessionId, session);
 
@@ -98,6 +98,31 @@ public class SessionService {
     public List<Operation> getDocumentState(String sessionId) {
         return sessionOperations.getOrDefault(sessionId, new ArrayList<>());
     }
+
+    public void handleUserEvent(String sessionId, UserEvent event) {
+        Session session = sessions.get(sessionId);
+        if (session != null) {
+            if ("join".equals(event.getType())) {
+                if ("editor".equals(event.getUserType()) && session.getEditor_count() < 4) {
+                    session.incrementEditorCount();
+                } else if ("viewer".equals(event.getUserType())) {
+                    session.incrementViewerCount();
+                }
+            } else if ("leave".equals(event.getType())) {
+                if ("editor".equals(event.getUserType())) {
+                    session.decrementEditorCount();
+                } else if ("viewer".equals(event.getUserType())) {
+                    session.decrementViewerCount();
+                }
+            }
+        }
+    }
+
+    public int getEditorsCount(String sessionId) {
+        Session session = sessions.get(sessionId);
+        return session != null ? session.getEditor_count() : 0;
+    }
+
 //    public void broadcastOperation(String sessionId, Operation operation) {
 //        Map<String, WebSocketSession> sessionUsers = sessions.get(sessionId);
 //        if (sessionUsers != null) {

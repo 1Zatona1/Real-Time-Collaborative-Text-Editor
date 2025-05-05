@@ -22,7 +22,7 @@ public class DocumentRestController {
 
     // Retrieve the current document state (CRDT content) for a session
     @GetMapping("/{code}/state")
-    public List<Operation> getDocumentState(@PathVariable String code) {
+    public List<String> getDocumentState(@PathVariable String code) {
         SessionService.CodeType type = sessionService.validateCode(code);
         if (type != SessionService.CodeType.INVALID) {
             // Handle valid code
@@ -32,11 +32,30 @@ public class DocumentRestController {
             if (operations == null) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found");
             }
-            return operations;
+            return operations.stream()
+                    .map(op -> String.join(",",
+                            op.getType(),
+                            String.valueOf(op.getPosition()),
+                            op.getTextChanged() == null ? "" : op.getTextChanged(),
+                            String.valueOf(op.getUserId()),
+                            op.getTimestamp().toString()
+                    ))
+                    .toList();
         }
         else{
-            // Send message that this is an invalid code to tell frontend to invoke error message (Wrong session code entered)
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found");
         }
     }
+
+    @GetMapping("/{code}/editors/count")
+    public int getEditorsCount(@PathVariable String code) {
+        SessionService.CodeType type = sessionService.validateCode(code);
+        if (type != SessionService.CodeType.INVALID) {
+            String sessionId = sessionService.getSessionIdByCode(code);
+            return sessionService.getEditorsCount(sessionId);
+        } else {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found");
+        }
+    }
+
 }

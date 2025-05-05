@@ -13,6 +13,8 @@ module com.example.apt_project {
     requires spring.websocket;
     requires spring.messaging;
     requires spring.web;
+    requires spring.webmvc;
+    requires com.fasterxml.jackson.databind;
 
     opens com.example.apt_project to javafx.fxml;
     exports com.example.apt_project;

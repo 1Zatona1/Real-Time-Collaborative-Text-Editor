@@ -9,6 +9,8 @@ public class Session {
     private AtomicInteger viewer_count;
     private AtomicInteger editor_count;
 
+    public Session() {}
+
     public Session(String id, String viewer_code, String editor_code) {
         this.id = id;
         this.viewer_code = viewer_code;

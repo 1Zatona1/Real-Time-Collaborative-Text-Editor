@@ -4,24 +4,20 @@ import treeCRDT.NodeId;
 import java.sql.Timestamp;
 
 public class Operation {
-    private String type;
-    private Timestamp timestamp;
+    private String type; // "insert" or "delete"
     private int position;
-    private int userId;
-    private String textChanged;
-    private NodeId nodeId; // ID of the affected node
-    private NodeId parentNodeId; // ID of the parent node (for inserts)
+    private String textChanged; // Added for CrdtTree compatibility
+    private int userId; // Added for CrdtTree compatibility
+    private Timestamp timestamp; // Added for CrdtTree compatibility
 
     public Operation() {}
 
-    public Operation(String type, Timestamp timestamp, int position, int userId, String textChanged, NodeId nodeId, NodeId parentNodeId) {
+    public Operation(String type, String textChanged, int userId, Timestamp timestamp, int position) {
         this.type = type;
-        this.timestamp = timestamp;
-        this.position = position;
-        this.userId = userId;
         this.textChanged = textChanged;
-        this.nodeId = nodeId;
-        this.parentNodeId = parentNodeId;
+        this.userId = userId;
+        this.position = position;
+        this.timestamp = timestamp;
     }
 
     public String getType() {
@@ -32,14 +28,6 @@ public class Operation {
         this.type = type;
     }
 
-    public Timestamp getTimestamp() {
-        return timestamp;
-    }
-
-    public void setTimestamp(Timestamp timestamp) {
-        this.timestamp = timestamp;
-    }
-
     public int getPosition() {
         return position;
     }
@@ -48,35 +36,28 @@ public class Operation {
         this.position = position;
     }
 
-    public int getUserId() {
-        return userId;
-    }
-
-    public void setUserId(int userId) {
-        this.userId = userId;
-    }
-
     public String getTextChanged() {
         return textChanged;
+    }
+
+    public int getUserId() {
+        return userId;
     }
 
     public void setTextChanged(String textChanged) {
         this.textChanged = textChanged;
     }
 
-    public NodeId getNodeId() {
-        return nodeId;
+
+    public void setUserId(int userId) {
+        this.userId = userId;
     }
 
-    public void setNodeId(NodeId nodeId) {
-        this.nodeId = nodeId;
+    public Timestamp getTimestamp() {
+        return timestamp;
     }
 
-    public NodeId getParentNodeId() {
-        return parentNodeId;
-    }
-
-    public void setParentNodeId(NodeId parentNodeId) {
-        this.parentNodeId = parentNodeId;
+    public void setTimestamp(Timestamp timestamp) {
+        this.timestamp = timestamp;
     }
 }
