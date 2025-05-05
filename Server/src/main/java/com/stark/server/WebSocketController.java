@@ -37,11 +37,12 @@ public class WebSocketController {
     @MessageMapping("/update/{sessionId}")
     public void updateDocument(@DestinationVariable String sessionId, @Payload String operationStr) {
         // Add the operation to the session history
+        System.out.println("ana geet ya basha");
         Operation operation = parseOperation(operationStr);
         boolean success = sessionService.addOperation(sessionId, operation);
         if (success) {
             // Broadcast the operation to all clients subscribed to this session
-            messagingTemplate.convertAndSend("/topic/document/" + sessionId, operation);
+            messagingTemplate.convertAndSend("/topic/document/" + sessionId, operationStr);
 
             System.out.println("Broadcast operation: " + operationStr);
         } else {

@@ -15,6 +15,7 @@ module com.example.apt_project {
     requires spring.web;
     requires spring.webmvc;
     requires com.fasterxml.jackson.databind;
+    requires spring.core;
 
     opens com.example.apt_project to javafx.fxml;
     exports com.example.apt_project;

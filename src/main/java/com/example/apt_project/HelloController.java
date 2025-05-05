@@ -16,6 +16,7 @@ import javafx.stage.Stage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 public class HelloController {
@@ -87,12 +88,26 @@ public class HelloController {
     @FXML
     public void handleJoinBtn() throws IOException {
 
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("NewDocument.fxml"));
+        String url = "/api/documents/" + sessionField.getText() + "state";
+        List<String> allOperations = HttpHelper.getListOfOperation(sessionField.getText());
+        if (allOperations == null) {
+            // Code to handle error message
+            return;
+        }
+        String sessionId = HttpHelper.getDocumentIdByCode(sessionField.getText());
+
+        System.out.println(allOperations);
+
+
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("JoinDocument.fxml"));
         Parent root = loader.load();
 
 
         Stage mainStage = (Stage) joinBtn.getScene().getWindow();
         mainStage.close();
+
+        JoinDocument controller = loader.getController();
+        controller.setUpDocument(allOperations, sessionId);
 
         Stage newDocStage = new Stage();
         Scene newDocScene = new Scene(root, 800, 600);

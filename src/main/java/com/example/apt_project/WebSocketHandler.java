@@ -10,6 +10,8 @@ import org.springframework.web.socket.messaging.WebSocketStompClient;
 import org.springframework.web.socket.sockjs.client.SockJsClient;
 import org.springframework.web.socket.sockjs.client.Transport;
 import org.springframework.web.socket.sockjs.client.WebSocketTransport;
+import java.lang.reflect.Type;
+
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -17,6 +19,10 @@ import java.util.List;
 
 public class WebSocketHandler {
     StompSession stompSession;
+
+    public StompSession getStompSession() {
+        return stompSession;
+    }
 
     public void connectToWebSocket() {
         try {
@@ -39,6 +45,29 @@ public class WebSocketHandler {
         }
     }
 
+    public void updateDocument(String sessionId, String Change) {
+        if (stompSession != null && stompSession.isConnected()) {
+            try {
+                String destination = "/app/update/" + sessionId ;
+                stompSession.send(destination, Change);
+            } catch (Exception e) {
+                System.out.println("Failed to send document update: " + e.getMessage());
+            }
+        } else {
+            System.out.println("Not connected to WebSocket server");
+        }
+    }
+
+
+
+    public void close(){
+        if (this.stompSession != null) {
+            this.stompSession.disconnect();
+            System.out.println("Closed WebSocket connection.");
+            System.exit(0);
+        }
+    }
+
 
 
 }
@@ -46,6 +75,7 @@ public class WebSocketHandler {
 class MyStompSessionHandler extends StompSessionHandlerAdapter {
     @Override
     public void afterConnected(StompSession session, StompHeaders connectedHeaders) {
+        System.out.println("Connected Successfully");
     }
 
     @Override

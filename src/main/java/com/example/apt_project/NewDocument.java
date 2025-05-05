@@ -48,6 +48,8 @@ public class NewDocument {
     private String viewerCode;
     private String sessionId;
     private boolean ignoreIncoming = false;
+    WebSocketHandler myWebSocket = new WebSocketHandler();
+
 
 
 
@@ -71,7 +73,6 @@ public class NewDocument {
         mainContainer.getChildren().add(1, codeArea);
 
         String mySessionDetails = HttpHelper.createDocument();
-        WebSocketHandler myWebSocket = new WebSocketHandler();
         myWebSocket.connectToWebSocket();
 
         String[] parts = mySessionDetails.split(",");
@@ -107,17 +108,16 @@ public class NewDocument {
 
     private void handleTextChange(PlainTextChange change) {
         int insertPos = change.getPosition();
-
         // ----- Handle Deletions -----
         if (!change.getRemoved().isEmpty()) {
             int removedLen = change.getRemoved().length();
-            List<Integer> keysToShift = new ArrayList<>();
 
             for (int i = insertPos; i < insertPos + removedLen; i++) {
                 CrdtNode node = positionToNodeMap.get(i);
                 if (node != null) {
                     node.setDeleted(true);
                     // Add Handling of sending the operation to server
+
                 }
             }
 
@@ -132,6 +132,11 @@ public class NewDocument {
             for (int i = sizeBefore - removedLen; i < sizeBefore; i++) {
                 positionToNodeMap.remove(i);
             }
+
+            Timestamp ts = new Timestamp(System.currentTimeMillis());
+            String Change = "delete," + insertPos + "," + change.getRemoved() + "," + currentUserId + "," + ts;
+            myWebSocket.updateDocument(sessionId, Change);
+
         }
 
         // ----- Handle Insertions -----
@@ -159,10 +164,11 @@ public class NewDocument {
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
+                Timestamp ts = new Timestamp(System.currentTimeMillis());
 
                 NodeId newNodeId = new NodeId(
                         currentUserId,
-                        new Timestamp(System.currentTimeMillis())
+                        ts
                 );
 
                 CrdtNode newNode = new CrdtNode(newNodeId, c);
@@ -170,7 +176,11 @@ public class NewDocument {
                 positionToNodeMap.put(insertPos + i, newNode);
 
                 parentNode = newNode; // Update parent for next character
+
+                String Change = "insert," + insertPos + "," + change.getInserted() + "," + currentUserId + "," + ts;
+                myWebSocket.updateDocument(sessionId, Change);
             }
+
         }
 
         crdtTree.printCrdtTree();

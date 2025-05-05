@@ -58,4 +58,14 @@ public class DocumentRestController {
         }
     }
 
+    @GetMapping("/{code}/getid")
+    public String getDocumentId(@PathVariable String code) {
+        SessionService.CodeType type = sessionService.validateCode(code);
+        if (type != SessionService.CodeType.INVALID) {
+            String sessionId = sessionService.getSessionIdByCode(code);
+            return sessionId;
+        }
+        return null;
+    }
+
 }
