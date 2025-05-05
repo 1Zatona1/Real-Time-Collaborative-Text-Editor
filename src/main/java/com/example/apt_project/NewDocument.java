@@ -106,28 +106,60 @@ public class NewDocument {
     }
 
     private void handleTextChange(PlainTextChange change) {
-        // Handle deletions
+        int insertPos = change.getPosition();
+
+        // ----- Handle Deletions -----
         if (!change.getRemoved().isEmpty()) {
-            for (int i = change.getPosition(); i < change.getPosition() + change.getRemoved().length(); i++) {
+            int removedLen = change.getRemoved().length();
+            List<Integer> keysToShift = new ArrayList<>();
+
+            for (int i = insertPos; i < insertPos + removedLen; i++) {
                 CrdtNode node = positionToNodeMap.get(i);
                 if (node != null) {
                     node.setDeleted(true);
                     // Add Handling of sending the operation to server
                 }
             }
+
+            // Shift all nodes after the deleted ones
+            int sizeBefore = positionToNodeMap.size();
+            for (int i = insertPos + removedLen; i < sizeBefore; i++) {
+                CrdtNode shiftedNode = positionToNodeMap.remove(i);
+                positionToNodeMap.put(i - removedLen, shiftedNode);
+            }
+
+            // Remove trailing keys if they remain
+            for (int i = sizeBefore - removedLen; i < sizeBefore; i++) {
+                positionToNodeMap.remove(i);
+            }
         }
 
-        // Handle insertions
+        // ----- Handle Insertions -----
         if (!change.getInserted().isEmpty()) {
             String insertedText = change.getInserted();
-            int insertPos = change.getPosition();
-            System.out.println(insertPos);
+            int insertedLen = insertedText.length();
 
-            // Find parent node (node before insertion point)
+            // Shift existing nodes forward to make space
+            int sizeBefore = positionToNodeMap.size();
+            for (int i = sizeBefore - 1; i >= insertPos; i--) {
+                CrdtNode shiftedNode = positionToNodeMap.get(i);
+                if (shiftedNode != null) {
+                    positionToNodeMap.put(i + insertedLen, shiftedNode);
+                }
+            }
+
+            // Insert new nodes
             CrdtNode parentNode = findParentNode(insertPos);
 
             for (int i = 0; i < insertedText.length(); i++) {
                 char c = insertedText.charAt(i);
+
+                try {
+                    Thread.sleep(1); // Ensure unique timestamp
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+
                 NodeId newNodeId = new NodeId(
                         currentUserId,
                         new Timestamp(System.currentTimeMillis())
@@ -135,16 +167,16 @@ public class NewDocument {
 
                 CrdtNode newNode = new CrdtNode(newNodeId, c);
                 crdtTree.addChild(parentNode != null ? parentNode.getId() : crdtTree.getRoot().getId(), newNode);
-
-                // Update position mapping
                 positionToNodeMap.put(insertPos + i, newNode);
 
-                // Add Handling of sending the operation to server
+                parentNode = newNode; // Update parent for next character
             }
         }
+
         crdtTree.printCrdtTree();
         updateUIFromCRDT();
     }
+
 
     private CrdtNode findParentNode(int position) {
         if (position == 0) return crdtTree.getRoot();
