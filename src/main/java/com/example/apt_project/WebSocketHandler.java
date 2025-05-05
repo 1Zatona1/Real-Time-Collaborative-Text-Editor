@@ -38,7 +38,7 @@ public class WebSocketHandler {
             // Connect to WebSocket server
             String url = "ws://localhost:8080/ws"; // WebSocket endpoint
             StompSessionHandler sessionHandler = new MyStompSessionHandler();
-            stompSession = stompClient.connectAsync(url, sessionHandler).get();
+            stompSession = stompClient.connect(url, sessionHandler).get();
 
         } catch (Exception e) {
             System.out.println("WebSocket connection failed: " + e.getMessage());

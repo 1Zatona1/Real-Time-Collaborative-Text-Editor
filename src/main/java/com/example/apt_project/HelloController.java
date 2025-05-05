@@ -88,7 +88,6 @@ public class HelloController {
     @FXML
     public void handleJoinBtn() throws IOException {
 
-        String url = "/api/documents/" + sessionField.getText() + "state";
         List<String> allOperations = HttpHelper.getListOfOperation(sessionField.getText());
         if (allOperations == null) {
             // Code to handle error message
