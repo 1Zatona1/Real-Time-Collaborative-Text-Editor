@@ -40,12 +40,7 @@ public class JoinDocument {
     public String fileContent;
     public Button exportBtn;
     public Button backBtn;
-    public Label editorCodeLabel;
-    public Label editorCodeText;
-    public Label viewerCodeLabel;
-    public Label viewerCodeText;
-    public Button copyEditorCodeBtn;
-    public Button copyViewerCodeBtn;
+
     private CrdtTree crdtTree = new CrdtTree();
     private int currentUserId = 2; // Or get from authentication
     private Map<Integer, CrdtNode> positionToNodeMap = new HashMap<>();
@@ -90,10 +85,13 @@ public class JoinDocument {
         return crdtTree.getRoot();
     }
 
-    public void setUpDocument(List<String> myOperations, String ss) {
+    public void setUpDocument(List<String> myOperations, String ss, String userCode) {
         positionToNodeMap.clear(); // Clear old state
         sessionId = ss;
-
+        if (userCode.startsWith("V"))
+        {
+            codeArea.setEditable(false);
+        }
         for (String opString : myOperations) {
             String[] parts = opString.split(",", -1);
             if (parts.length < 5) continue; // Skip invalid entries

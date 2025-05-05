@@ -20,27 +20,7 @@
                 <Button fx:id="backBtn" mnemonicParsing="false" onAction="#handleBackBtn" text="Back to Main" styleClass="btn-danger" />
             </VBox>
 
-            <!-- Code Sharing Section -->
-            <Label styleClass="section-header" text="Share Options" />
-            <Separator styleClass="section-separator" />
 
-            <!-- Editor Code -->
-            <VBox spacing="5" styleClass="code-group">
-                <Label fx:id="editorCodeLabel" styleClass="code-label" text="Editor Code" />
-                <HBox spacing="5" alignment="CENTER_LEFT">
-                    <Label fx:id="editorCodeText" styleClass="code-text" text="ABCD-1234" />
-                    <Button fx:id="copyEditorCodeBtn" mnemonicParsing="false" onAction="#handleCopyEditorCode" text="Copy" styleClass="btn-success, btn-small" />
-                </HBox>
-            </VBox>
-
-            <!-- Viewer Code -->
-            <VBox spacing="5" styleClass="code-group">
-                <Label fx:id="viewerCodeLabel" styleClass="code-label" text="Viewer Code" />
-                <HBox spacing="5" alignment="CENTER_LEFT">
-                    <Label fx:id="viewerCodeText" styleClass="code-text" text="EFGH-5678" />
-                    <Button fx:id="copyViewerCodeBtn" mnemonicParsing="false" onAction="#handleCopyViewerCode" text="Copy" styleClass="btn-success, btn-small" />
-                </HBox>
-            </VBox>
         </VBox>
         <!-- CodeArea will be added programmatically -->
     </HBox>

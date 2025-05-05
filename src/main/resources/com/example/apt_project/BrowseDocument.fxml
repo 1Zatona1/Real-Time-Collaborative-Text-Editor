@@ -37,7 +37,7 @@
             <VBox spacing="5" styleClass="code-group">
                 <Label fx:id="viewerCodeLabel" styleClass="code-label" text="Viewer Code" />
                 <HBox spacing="5" alignment="CENTER_LEFT">
-                    <Label fx:id="viewerCodeText" styleClass="code-text" text="EFGH-5678" />
+                    <Label fx:id="viewerCodeText" styleClass="code-text" text="####" />
                     <Button fx:id="copyViewerCodeBtn" mnemonicParsing="false" onAction="#handleCopyViewerCode" text="Copy" styleClass="btn-success, btn-small" />
                 </HBox>
             </VBox>

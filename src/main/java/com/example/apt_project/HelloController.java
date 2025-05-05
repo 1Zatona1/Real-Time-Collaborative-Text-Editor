@@ -63,29 +63,20 @@ public class HelloController {
         fileChooser.getExtensionFilters().add(extFilter);
 
         Stage browseDocStage = new Stage();
-        userFile = fileChooser.showOpenDialog(browseDocStage);
-        if (userFile != null) {
-            try {
-                userFileContent = Files.readString(userFile.toPath());
-            } catch (IOException e) {
-                System.out.println("Error Reading User File: " + e);
-            }
 
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("BrowseDocument.fxml"));
-            Parent root = loader.load();
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("BrowseDocument.fxml"));
+        Parent root = loader.load();
 
-            Stage mainStage = (Stage) browseBtn.getScene().getWindow();
-            mainStage.close();
+        Stage mainStage = (Stage) browseBtn.getScene().getWindow();
+        mainStage.close();
 
-            BrowseDocument controller = loader.getController();
-            controller.setupDocument(userFileContent);
-            Scene browseDocScene = new Scene(root);
-            browseDocScene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
-            browseDocStage.setTitle("Real-Time Collaborative Text Editor");
-            browseDocStage.setScene(browseDocScene);
-            browseDocStage.setMaximized(true);
-            browseDocStage.show();
-        }
+
+        Scene browseDocScene = new Scene(root);
+        browseDocScene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
+        browseDocStage.setTitle("Real-Time Collaborative Text Editor");
+        browseDocStage.setScene(browseDocScene);
+        browseDocStage.setMaximized(true);
+        browseDocStage.show();
     }
 
     @FXML
@@ -111,7 +102,7 @@ public class HelloController {
         mainStage.close();
 
         JoinDocument controller = loader.getController();
-        controller.setUpDocument(allOperations, sessionId);
+        controller.setUpDocument(allOperations, sessionId, sessionField.getText());
 
         Stage newDocStage = new Stage();
         Scene newDocScene = new Scene(root, 800, 600);

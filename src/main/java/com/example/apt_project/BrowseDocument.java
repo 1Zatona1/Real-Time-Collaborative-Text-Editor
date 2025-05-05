@@ -1,5 +1,6 @@
 package com.example.apt_project;
 
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -15,14 +16,17 @@ import javafx.stage.Stage;
 import org.fxmisc.richtext.CodeArea;
 import org.fxmisc.richtext.LineNumberFactory;
 import org.fxmisc.richtext.model.PlainTextChange;
+import org.springframework.messaging.simp.stomp.StompFrameHandler;
+import org.springframework.messaging.simp.stomp.StompHeaders;
+import org.springframework.messaging.simp.stomp.StompSession;
 import treeCRDT.CrdtNode;
 import treeCRDT.CrdtTree;
 import treeCRDT.NodeId;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.sql.Time;
+import java.io.*;
+import java.lang.reflect.Type;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.Map;
@@ -43,17 +47,16 @@ public class BrowseDocument {
     private String editorCode;
     private String viewerCode;
     private String sessionId;
+    private boolean isProcessingRemoteChange = false;
+
 
     private CrdtTree crdtTree = new CrdtTree();
     private int currentUserId = 1; // Or get from authentication
     private Map<Integer, CrdtNode> positionToNodeMap = new HashMap<>();
-    WebSocketHandler myWebSocket = new WebSocketHandler();
-
-
+    private WebSocketHandler myWebSocket = new WebSocketHandler();
 
     @FXML
-    public void  initialize()
-    {
+    public void initialize() {
         codeArea = new CodeArea();
         codeArea.getStyleClass().add("code-area");
         codeArea.setParagraphGraphicFactory(LineNumberFactory.get(codeArea));
@@ -61,14 +64,13 @@ public class BrowseDocument {
         HBox.setHgrow(codeArea, javafx.scene.layout.Priority.ALWAYS);
         codeArea.prefWidthProperty().bind(mainContainer.widthProperty());
 
-
         mainContainer.getChildren().add(1, codeArea);
 
+        // Create a new document session
         String mySessionDetails = HttpHelper.createDocument();
-        myWebSocket.connectToWebSocket();
 
+        // Parse session details
         String[] parts = mySessionDetails.split(",");
-
         sessionId = parts[0];
         editorCode = parts[1];
         viewerCode = parts[2];
@@ -76,12 +78,147 @@ public class BrowseDocument {
         editorCodeText.setText(editorCode);
         viewerCodeText.setText(viewerCode);
 
+        // Initialize WebSocket connection
+        myWebSocket.connectToWebSocket();
+        // myWebSocket.subscribeToDocument(sessionId, this::handleRemoteChange);
+        subscribeToDocument(sessionId);
+        // Prompt user to select a file immediately after initialization
+        promptForFileSelection();
     }
 
+    public void subscribeToDocument(String sessionId) {
+        StompSession stompSession = myWebSocket.getStompSession();
 
+        if (stompSession != null && stompSession.isConnected()) {
+            try {
+                String topic = "/topic/document/" + sessionId;
+                stompSession.subscribe(topic, new StompFrameHandler() {
+                    @Override
+                    public Type getPayloadType(StompHeaders headers) {
+                        return String.class;
+                    }
 
-    public void handleBackBtn() throws IOException
-    {
+                    @Override
+                    public void handleFrame(StompHeaders headers, Object payload) {
+                        if (payload instanceof String) {
+                            String message = payload.toString();
+                            String[] parts = message.split(",", -1);
+
+                            if (parts.length < 5) return; // Skip invalid messages
+
+                            // Check if this message is from this user
+                            int userId = Integer.parseInt(parts[3]);
+                            if (userId == currentUserId) return; // Skip our own messages
+
+                            Platform.runLater(() -> {
+                                isProcessingRemoteChange = true;
+                                try {
+                                    if (parts[0].equalsIgnoreCase("insert")) {
+                                        processInsertOperation(parts);
+                                    } else if (parts[0].equalsIgnoreCase("delete")) {
+                                        processDeleteOperation(parts);
+                                    }
+
+                                    System.out.println("Document Update: " + message);
+                                    updateUIFromCRDT();
+                                } finally {
+                                    isProcessingRemoteChange = false;
+                                }
+                            });
+                        }
+                    }
+                });
+
+                System.out.println("Subscribed to document " + sessionId);
+            } catch (Exception e) {
+                System.out.println("Failed to subscribe to document: " + e.getMessage());
+                e.printStackTrace();
+            }
+        } else {
+            System.out.println("Not connected to WebSocket server");
+        }
+    }
+
+    private void processInsertOperation(String[] parts) {
+        int insertPos = Integer.parseInt(parts[1]);
+        char c = parts[2].charAt(0);
+        int userId = Integer.parseInt(parts[3]);
+        Timestamp ts = Timestamp.valueOf(parts[4]);
+        NodeId nodeId = new NodeId(userId, ts);
+        CrdtNode newNode = new CrdtNode(nodeId, c);
+
+        // Shift existing nodes forward to make space
+        int sizeBefore = positionToNodeMap.size();
+        for (int i = sizeBefore - 1; i >= insertPos; i--) {
+            CrdtNode shiftedNode = positionToNodeMap.get(i);
+            if (shiftedNode != null) {
+                positionToNodeMap.put(i + 1, shiftedNode);
+            }
+        }
+
+        // Add to CRDT tree
+        CrdtNode parentNode = findParentNode(insertPos);
+        crdtTree.addChild(parentNode != null ? parentNode.getId() : crdtTree.getRoot().getId(), newNode);
+
+        // Insert into position map
+        positionToNodeMap.put(insertPos, newNode);
+    }
+
+    private void processDeleteOperation(String[] parts) {
+        int deletePos = Integer.parseInt(parts[1]);
+        String removed = parts[2];
+        int removedLen = removed.length();
+
+        for (int i = deletePos; i < deletePos + removedLen; i++) {
+            CrdtNode node = positionToNodeMap.get(i);
+            if (node != null) {
+                node.setDeleted(true);
+            }
+        }
+
+        // Shift all nodes after the deleted ones
+        int sizeBefore = positionToNodeMap.size();
+        for (int i = deletePos + removedLen; i < sizeBefore; i++) {
+            CrdtNode shiftedNode = positionToNodeMap.remove(i);
+            if (shiftedNode != null) {
+                positionToNodeMap.put(i - removedLen, shiftedNode);
+            }
+        }
+
+        // Remove trailing keys if they remain
+        for (int i = sizeBefore - removedLen; i < sizeBefore; i++) {
+            positionToNodeMap.remove(i);
+        }
+    }
+
+    private void promptForFileSelection() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Open File");
+        fileChooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("Text Files", "*.txt")
+        );
+
+        File selectedFile = fileChooser.showOpenDialog(null);
+        if (selectedFile != null) {
+            try {
+                fileContent = new String(Files.readAllBytes(Paths.get(selectedFile.getPath())));
+                setupDocument(fileContent);
+            } catch (IOException e) {
+                System.out.println("Error loading file: " + e.getMessage());
+                fileContent = ""; // Set empty content if file loading fails
+                setupDocument(fileContent);
+            }
+        } else {
+            // User cancelled file selection, set empty content
+            fileContent = "";
+            setupDocument(fileContent);
+        }
+    }
+
+    public void handleBackBtn() throws IOException {
+        // Notify server that user is leaving the document
+        // myWebSocket.leaveDocument(sessionId);
+
         FXMLLoader loader = new FXMLLoader(getClass().getResource("hello-view.fxml"));
         Parent root = loader.load();
 
@@ -99,11 +236,10 @@ public class BrowseDocument {
         newStage.setMaximized(true);
     }
 
-
-    public void handleExport() throws IOException
-    {
+    public void handleExport() throws IOException {
         fileContent = codeArea.getText();
         if (fileContent.isEmpty()) return;
+
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Save File");
 
@@ -123,7 +259,6 @@ public class BrowseDocument {
         }
     }
 
-
     public void setupDocument(String content) {
         this.fileContent = content;
 
@@ -138,13 +273,14 @@ public class BrowseDocument {
         CrdtNode lastInsertedNode = null;
 
         for (int i = 0; i < fileContent.length(); i++) {
+            Timestamp ts = new Timestamp(System.currentTimeMillis());
             NodeId newNodeId = new NodeId(
                     currentUserId,
-                    new Timestamp(System.currentTimeMillis())
+                    ts
             );
 
             try {
-                Thread.sleep(1);
+                Thread.sleep(1); // Ensure unique timestamps
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
@@ -157,17 +293,104 @@ public class BrowseDocument {
             } else {
                 crdtTree.addChild(lastInsertedNode.getId(), newNode);
             }
-            System.out.println("position: " + i + " " + "Node entered " + newNode + " value: " + newNode.getValue());
+            String Change = "insert," + i + "," + fileContent.charAt(i) + "," + currentUserId + "," + ts;
+            myWebSocket.updateDocument(sessionId, Change);
             positionToNodeMap.put(i, newNode);
             lastInsertedNode = newNode;
         }
 
-        crdtTree.printCrdtTree();
-        codeArea.plainTextChanges().subscribe(this::handleTextChange);
-        updateUIFromCRDT();
+        // Send the initial document state to the server
+        if (!fileContent.isEmpty()) {
+            Timestamp ts = new Timestamp(System.currentTimeMillis());
+            String initialChange = "initialize," + 0 + "," + fileContent + "," + currentUserId + "," + ts;
+            myWebSocket.updateDocument(sessionId, initialChange);
+        }
 
+        // Set up text change listener
+        codeArea.plainTextChanges().subscribe(this::handleTextChange);
     }
 
+    private void handleRemoteChange(String changeInfo) {
+        // Parse the change info received from WebSocket
+        String[] parts = changeInfo.split(",");
+        if (parts.length < 5) return;
+
+        String operation = parts[0];
+        int position = Integer.parseInt(parts[1]);
+        String content = parts[2];
+        int userId = Integer.parseInt(parts[3]);
+
+        // Skip processing if this is our own change
+        if (userId == currentUserId) return;
+
+        // Apply the change to the CRDT structure
+        if ("insert".equals(operation)) {
+            handleRemoteInsert(position, content);
+        } else if ("delete".equals(operation)) {
+            handleRemoteDelete(position, content);
+        } else if ("initialize".equals(operation)) {
+            // Handle initial document state if needed
+        }
+    }
+
+    private void handleRemoteInsert(int position, String content) {
+        // Find parent node where to insert
+        CrdtNode parentNode = findParentNode(position);
+
+        for (int i = 0; i < content.length(); i++) {
+            char c = content.charAt(i);
+
+            try {
+                Thread.sleep(1); // Ensure unique timestamp
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+
+            NodeId newNodeId = new NodeId(
+                    -1, // Use a special ID for remote users
+                    new Timestamp(System.currentTimeMillis())
+            );
+
+            CrdtNode newNode = new CrdtNode(newNodeId, c);
+            crdtTree.addChild(parentNode != null ? parentNode.getId() : crdtTree.getRoot().getId(), newNode);
+
+            // Shift existing nodes
+            for (int j = positionToNodeMap.size() - 1; j >= position + i; j--) {
+                positionToNodeMap.put(j + 1, positionToNodeMap.get(j));
+            }
+
+            positionToNodeMap.put(position + i, newNode);
+            parentNode = newNode;
+        }
+
+        updateUIFromCRDT();
+    }
+
+    private void handleRemoteDelete(int position, String content) {
+        int contentLength = content.length();
+
+        // Mark nodes as deleted
+        for (int i = position; i < position + contentLength; i++) {
+            CrdtNode node = positionToNodeMap.get(i);
+            if (node != null) {
+                node.setDeleted(true);
+            }
+        }
+
+        // Shift remaining nodes
+        int sizeBefore = positionToNodeMap.size();
+        for (int i = position + contentLength; i < sizeBefore; i++) {
+            CrdtNode shiftedNode = positionToNodeMap.remove(i);
+            positionToNodeMap.put(i - contentLength, shiftedNode);
+        }
+
+        // Clean up trailing keys
+        for (int i = sizeBefore - contentLength; i < sizeBefore; i++) {
+            positionToNodeMap.remove(i);
+        }
+
+        updateUIFromCRDT();
+    }
 
     private CrdtNode findParentNode(int position) {
         if (position == 0) return crdtTree.getRoot();
@@ -180,12 +403,27 @@ public class BrowseDocument {
         return crdtTree.getRoot();
     }
 
+    // Track whether we're currently updating the UI
+    private boolean isUpdatingUI = false;
+
     private void updateUIFromCRDT() {
+        if (isUpdatingUI) return; // Prevent recursive calls
+
+        isUpdatingUI = true;
+
         StringBuilder sb = new StringBuilder();
         for (CrdtNode child : crdtTree.getRoot().getChildren()) {
             traverseAndBuildString(child, sb);
         }
-        codeArea.replaceText(sb.toString());
+
+        String currentText = codeArea.getText();
+        String newText = sb.toString();
+
+        if (!currentText.equals(newText)) {
+            codeArea.replaceText(newText);
+        }
+
+        isUpdatingUI = false;
     }
 
     private void traverseAndBuildString(CrdtNode node, StringBuilder sb) {
@@ -201,7 +439,11 @@ public class BrowseDocument {
     }
 
     private void handleTextChange(PlainTextChange change) {
+        // Skip processing if we're currently updating the UI from CRDT
+        if (isUpdatingUI) return;
+
         int insertPos = change.getPosition();
+
         // ----- Handle Deletions -----
         if (!change.getRemoved().isEmpty()) {
             int removedLen = change.getRemoved().length();
@@ -210,8 +452,6 @@ public class BrowseDocument {
                 CrdtNode node = positionToNodeMap.get(i);
                 if (node != null) {
                     node.setDeleted(true);
-                    // Add Handling of sending the operation to server
-
                 }
             }
 
@@ -219,7 +459,9 @@ public class BrowseDocument {
             int sizeBefore = positionToNodeMap.size();
             for (int i = insertPos + removedLen; i < sizeBefore; i++) {
                 CrdtNode shiftedNode = positionToNodeMap.remove(i);
-                positionToNodeMap.put(i - removedLen, shiftedNode);
+                if (shiftedNode != null) {
+                    positionToNodeMap.put(i - removedLen, shiftedNode);
+                }
             }
 
             // Remove trailing keys if they remain
@@ -228,9 +470,8 @@ public class BrowseDocument {
             }
 
             Timestamp ts = new Timestamp(System.currentTimeMillis());
-            String Change = "delete," + insertPos + "," + change.getRemoved() + "," + currentUserId + "," + ts;
-            myWebSocket.updateDocument(sessionId, Change);
-
+            String changeInfo = "delete," + insertPos + "," + change.getRemoved() + "," + currentUserId + "," + ts;
+            myWebSocket.updateDocument(sessionId, changeInfo);
         }
 
         // ----- Handle Insertions -----
@@ -258,27 +499,21 @@ public class BrowseDocument {
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
+
                 Timestamp ts = new Timestamp(System.currentTimeMillis());
-
-                NodeId newNodeId = new NodeId(
-                        currentUserId,
-                        ts
-                );
-
+                NodeId newNodeId = new NodeId(currentUserId, ts);
                 CrdtNode newNode = new CrdtNode(newNodeId, c);
+
                 crdtTree.addChild(parentNode != null ? parentNode.getId() : crdtTree.getRoot().getId(), newNode);
                 positionToNodeMap.put(insertPos + i, newNode);
-
                 parentNode = newNode; // Update parent for next character
-
-                String Change = "insert," + insertPos + "," + change.getInserted() + "," + currentUserId + "," + ts;
-                myWebSocket.updateDocument(sessionId, Change);
             }
 
+            // Send the change to the server
+            Timestamp ts = new Timestamp(System.currentTimeMillis());
+            String changeInfo = "insert," + insertPos + "," + insertedText + "," + currentUserId + "," + ts;
+            myWebSocket.updateDocument(sessionId, changeInfo);
         }
-
-        crdtTree.printCrdtTree();
-        updateUIFromCRDT();
     }
 
     @FXML
@@ -300,5 +535,4 @@ public class BrowseDocument {
             clipboard.setContent(content);
         }
     }
-
 }
