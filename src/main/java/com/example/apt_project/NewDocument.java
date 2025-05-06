@@ -442,19 +442,23 @@ public class NewDocument {
         String oldText = codeArea.getText();
 
         if (!newText.equals(oldText)) {
-            // Save caret and anchor positions
-            int caretPosition = codeArea.getCaretPosition();
-            int anchorPosition = codeArea.getAnchor();
+            if (isProcessingRemoteChange) {
+                // Just replace the text without affecting the local cursor
+                int caretPosition = codeArea.getCaretPosition();
+                int anchorPosition = codeArea.getAnchor();
 
-            // Replace text
-            codeArea.replaceText(newText);
+                codeArea.replaceText(newText);
 
-            // Try to restore caret and anchor safely
-            int newLength = newText.length();
-            int newCaretPos = Math.min(caretPosition, newLength);
-            int newAnchorPos = Math.min(anchorPosition, newLength);
+                // Restore caret & selection to what they were before remote update
+                int newLength = newText.length();
+                int newCaretPos = Math.min(caretPosition, newLength);
+                int newAnchorPos = Math.min(anchorPosition, newLength);
+                codeArea.selectRange(newAnchorPos, newCaretPos);
 
-            codeArea.selectRange(newAnchorPos, newCaretPos);  // restores both caret and selection
+            } else {
+                // Local change (e.g. undo/redo/import): allow cursor to adapt
+                codeArea.replaceText(newText);
+            }
         }
     }
 
