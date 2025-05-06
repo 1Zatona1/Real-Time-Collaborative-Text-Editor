@@ -31,6 +31,13 @@
                <Label fx:id="editorCodeText" styleClass="code-text" text="ABCD-1234" />
                <Button fx:id="copyEditorCodeBtn" mnemonicParsing="false" onAction="#handleCopyEditorCode" text="Copy" styleClass="btn-success, btn-small" />
             </HBox>
+            <!-- Editor List Placeholder -->
+            <VBox spacing="3">
+               <Label text="Editor: " fx:id="editor_1" />
+               <Label text="Editor: " fx:id="editor_2"/>
+               <Label text="Editor: " fx:id="editor_3" />
+               <Label text="Editor: " fx:id="editor_4" />
+            </VBox>
          </VBox>
 
          <!-- Viewer Code -->
@@ -40,6 +47,10 @@
                <Label fx:id="viewerCodeText" styleClass="code-text" text="EFGH-5678" />
                <Button fx:id="copyViewerCodeBtn" mnemonicParsing="false" onAction="#handleCopyViewerCode" text="Copy" styleClass="btn-success, btn-small" />
             </HBox>
+            <!-- Viewer List Placeholder -->
+            <VBox spacing="3" fx:id="Viewers_Vbox">
+
+            </VBox>
          </VBox>
       </VBox>
       <!-- CodeArea will be added programmatically -->
