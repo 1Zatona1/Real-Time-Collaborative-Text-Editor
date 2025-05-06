@@ -1,6 +1,5 @@
 package com.example.apt_project;
 
-
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -31,7 +30,6 @@ import java.lang.reflect.Type;
 import java.sql.Timestamp;
 import java.util.*;
 
-
 public class NewDocument {
     @FXML
     public VBox sidebar;
@@ -55,13 +53,8 @@ public class NewDocument {
     private boolean isProcessingRemoteChange = false;
     WebSocketHandler myWebSocket = new WebSocketHandler();
 
-
-
-
-
     @FXML
-    public void initialize()
-    {
+    public void initialize() {
         codeArea = new CodeArea();
         codeArea.getStyleClass().add("code-area"); // Add CSS class
 
@@ -90,6 +83,17 @@ public class NewDocument {
         viewerCodeText.setText(viewerCode);
 
         subscribeToDocument(sessionId);
+    }
+
+    private Timestamp getUniqueTimestamp() {
+        // Base timestamp
+        Timestamp ts = new Timestamp(System.currentTimeMillis());
+
+        // Add nanoTime to handle sub-millisecond operations
+        long nanos = System.nanoTime() % 1_000_000;
+        ts.setNanos((int)nanos);
+
+        return ts;
     }
 
     public void subscribeToDocument(String sessionId) {
@@ -146,59 +150,91 @@ public class NewDocument {
     }
 
     private void processInsertOperation(String[] parts) {
-        int insertPos = Integer.parseInt(parts[1]);
-        char c = parts[2].charAt(0);
-        int userId = Integer.parseInt(parts[3]);
-        Timestamp ts = Timestamp.valueOf(parts[4]);
-        NodeId nodeId = new NodeId(userId, ts);
-        CrdtNode newNode = new CrdtNode(nodeId, c);
+        try {
+            // Parse operation data
+            int insertPos = Integer.parseInt(parts[1]);
+            char c = parts[2].length() > 0 ? parts[2].charAt(0) : ' ';
+            int userId = Integer.parseInt(parts[3]);
+            Timestamp ts = Timestamp.valueOf(parts[4]);
+            NodeId nodeId = new NodeId(userId, ts);
 
-        // Shift existing nodes forward to make space
-        int sizeBefore = positionToNodeMap.size();
-        for (int i = sizeBefore - 1; i >= insertPos; i--) {
-            CrdtNode shiftedNode = positionToNodeMap.get(i);
-            if (shiftedNode != null) {
-                positionToNodeMap.put(i + 1, shiftedNode);
-            }
+            // Find parent node based on position
+            CrdtNode parentNode = findParentNode(insertPos);
+
+            // Create new node
+            CrdtNode newNode = new CrdtNode(nodeId, c);
+
+            // Add to CRDT tree
+            crdtTree.addChild(parentNode.getId(), newNode);
+
+            // Update position map from the tree structure
+            updatePositionMapFromTree();
+
+            System.out.println("Processed insert: '" + c + "' from user " + userId);
+        } catch (Exception e) {
+            System.err.println("Error processing insert operation: " + e.getMessage());
+            e.printStackTrace();
         }
-
-        // Add to CRDT tree
-        CrdtNode parentNode = findParentNode(insertPos);
-        crdtTree.addChild(parentNode != null ? parentNode.getId() : crdtTree.getRoot().getId(), newNode);
-
-        // Insert into position map
-        positionToNodeMap.put(insertPos, newNode);
     }
 
     private void processDeleteOperation(String[] parts) {
-        int deletePos = Integer.parseInt(parts[1]);
-        String removed = parts[2];
-        int removedLen = removed.length();
+        try {
+            int deletePos = Integer.parseInt(parts[1]);
+            String removed = parts[2];
+            int removedLen = removed.length();
 
-        for (int i = deletePos; i < deletePos + removedLen; i++) {
-            CrdtNode node = positionToNodeMap.get(i);
-            if (node != null) {
-                node.setDeleted(true);
+            // Mark nodes as deleted
+            for (int i = deletePos; i < deletePos + removedLen; i++) {
+                CrdtNode node = positionToNodeMap.get(i);
+                if (node != null) {
+                    node.setDeleted(true);
+                }
             }
-        }
 
-        // Shift all nodes after the deleted ones
-        int sizeBefore = positionToNodeMap.size();
-        for (int i = deletePos + removedLen; i < sizeBefore; i++) {
-            CrdtNode shiftedNode = positionToNodeMap.remove(i);
-            if (shiftedNode != null) {
-                positionToNodeMap.put(i - removedLen, shiftedNode);
-            }
-        }
+            // Update position map from tree structure
+            updatePositionMapFromTree();
 
-        // Remove trailing keys if they remain
-        for (int i = sizeBefore - removedLen; i < sizeBefore; i++) {
-            positionToNodeMap.remove(i);
+            System.out.println("Processed delete: '" + removed + "' at position " + deletePos);
+        } catch (Exception e) {
+            System.err.println("Error processing delete operation: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
-    public void handleBackBtn() throws IOException
-    {
+    private void updatePositionMapFromTree() {
+        // Get flattened visible nodes from tree
+        List<CrdtNode> flatNodes = flattenTree(crdtTree.getRoot());
+
+        // Clear and rebuild position map
+        positionToNodeMap.clear();
+        int visibleIndex = 0;
+
+        for (CrdtNode node : flatNodes) {
+            if (!node.isDeleted() && node != crdtTree.getRoot()) {
+                positionToNodeMap.put(visibleIndex, node);
+                visibleIndex++;
+            }
+        }
+    }
+
+    private List<CrdtNode> flattenTree(CrdtNode startNode) {
+        List<CrdtNode> result = new ArrayList<>();
+        if (startNode == null) return result;
+
+        // Add this node
+        if (startNode != crdtTree.getRoot()) {
+            result.add(startNode);
+        }
+
+        // Add all children recursively
+        for (CrdtNode child : startNode.getChildren()) {
+            result.addAll(flattenTree(child));
+        }
+
+        return result;
+    }
+
+    public void handleBackBtn() throws IOException {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("hello-view.fxml"));
         Parent root = loader.load();
 
@@ -223,82 +259,88 @@ public class NewDocument {
         }
 
         int insertPos = change.getPosition();
+
         // ----- Handle Deletions -----
         if (!change.getRemoved().isEmpty()) {
             int removedLen = change.getRemoved().length();
 
+            // Get the nodes to delete
+            List<CrdtNode> nodesToDelete = new ArrayList<>();
             for (int i = insertPos; i < insertPos + removedLen; i++) {
                 CrdtNode node = positionToNodeMap.get(i);
                 if (node != null) {
-                    node.setDeleted(true);
-                    // Add Handling of sending the operation to server
+                    nodesToDelete.add(node);
                 }
             }
 
-            // Shift all nodes after the deleted ones
-            int sizeBefore = positionToNodeMap.size();
-            for (int i = insertPos + removedLen; i < sizeBefore; i++) {
-                CrdtNode shiftedNode = positionToNodeMap.remove(i);
-                positionToNodeMap.put(i - removedLen, shiftedNode);
+            // Mark each node as deleted
+            for (CrdtNode node : nodesToDelete) {
+                node.setDeleted(true);
+
+                // Send delete operation for each character
+                Timestamp ts = getUniqueTimestamp();
+                String deleteOp = "delete,!!" +
+                        getPositionForNode(node) + ",!!" +
+                        node.getValue() + ",!!" +
+                        currentUserId + ",!!" +
+                        ts;
+                myWebSocket.updateDocument(sessionId, deleteOp);
             }
 
-            // Remove trailing keys if they remain
-            for (int i = sizeBefore - removedLen; i < sizeBefore; i++) {
-                positionToNodeMap.remove(i);
-            }
-
-            Timestamp ts = new Timestamp(System.currentTimeMillis());
-            String Change = "delete,!!" + insertPos + ",!!" + change.getRemoved() + ",!!" + currentUserId + ",!!" + ts;
-            myWebSocket.updateDocument(sessionId, Change);
+            // Update position map
+            updatePositionMapFromTree();
         }
 
         // ----- Handle Insertions -----
         if (!change.getInserted().isEmpty()) {
             String insertedText = change.getInserted();
-            int insertedLen = insertedText.length();
 
-            // Shift existing nodes forward to make space
-            int sizeBefore = positionToNodeMap.size();
-            for (int i = sizeBefore - 1; i >= insertPos; i--) {
-                CrdtNode shiftedNode = positionToNodeMap.get(i);
-                if (shiftedNode != null) {
-                    positionToNodeMap.put(i + insertedLen, shiftedNode);
-                }
-            }
-
-            // Insert new nodes
+            // Find the parent node for the first character
             CrdtNode parentNode = findParentNode(insertPos);
 
+            // Insert each character as a node in the tree
             for (int i = 0; i < insertedText.length(); i++) {
                 char c = insertedText.charAt(i);
 
-                try {
-                    Thread.sleep(1); // Ensure unique timestamp
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-                Timestamp ts = new Timestamp(System.currentTimeMillis());
+                // Create unique timestamp
+                Timestamp ts = getUniqueTimestamp();
 
-                NodeId newNodeId = new NodeId(
-                        currentUserId,
-                        ts
-                );
-
+                // Create new node
+                NodeId newNodeId = new NodeId(currentUserId, ts);
                 CrdtNode newNode = new CrdtNode(newNodeId, c);
-                crdtTree.addChild(parentNode != null ? parentNode.getId() : crdtTree.getRoot().getId(), newNode);
-                positionToNodeMap.put(insertPos + i, newNode);
 
-                parentNode = newNode; // Update parent for next character
+                // Add to tree
+                crdtTree.addChild(parentNode.getId(), newNode);
 
-                String Change = "insert,!!" + (insertPos + i) + ",!!" + c + ",!!" + currentUserId + ",!!" + ts;
-                myWebSocket.updateDocument(sessionId, Change);
+                // Send operation to server with position and parent NodeId
+                String insertOp = "insert,!!" +
+                        (insertPos + i) + ",!!" +
+                        c + ",!!" +
+                        currentUserId + ",!!" +
+                        ts;
+                myWebSocket.updateDocument(sessionId, insertOp);
+
+                // Update parent for next character
+                parentNode = newNode;
             }
+
+            // Update position map
+            updatePositionMapFromTree();
         }
 
         crdtTree.printCrdtTree();
         updateUIFromCRDT();
     }
 
+    private int getPositionForNode(CrdtNode targetNode) {
+        // Find position of a node in current view
+        for (Map.Entry<Integer, CrdtNode> entry : positionToNodeMap.entrySet()) {
+            if (entry.getValue().equals(targetNode)) {
+                return entry.getKey();
+            }
+        }
+        return -1; // Not found
+    }
 
     private CrdtNode findParentNode(int position) {
         if (position == 0) return crdtTree.getRoot();
@@ -335,10 +377,10 @@ public class NewDocument {
         }
     }
 
-    public void handleExport() throws IOException
-    {
+    public void handleExport() throws IOException {
         fileContent = codeArea.getText();
         if (fileContent.isEmpty()) return;
+
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Save File");
 
@@ -353,7 +395,8 @@ public class NewDocument {
             try (FileWriter writer = new FileWriter(file)) {
                 writer.write(fileContent);
             } catch (IOException e) {
-                System.out.println("Error Exporting file (BrowseDocument.java)" + e);
+                System.out.println("Error Exporting file: " + e.getMessage());
+                e.printStackTrace();
             }
         }
     }

@@ -22,10 +22,22 @@ public class NodeId {
 
     @Override
     public String toString() {
-        return "Id{" +
-                "id=" + userId +
-                ", timestamp='" + clock + '\'' +
-                '}';
+        return userId + ":" + clock.getTime();
+    }
+
+    public static NodeId fromString(String str) {
+        if (str == null || str.isEmpty()) {
+            return null;
+        }
+        try {
+            String[] parts = str.split(":");
+            int userId = Integer.parseInt(parts[0]);
+            long time = Long.parseLong(parts[1]);
+            return new NodeId(userId, new Timestamp(time));
+        } catch (Exception e) {
+            System.err.println("Error parsing NodeId: " + str);
+            return null;
+        }
     }
 
     @Override
