@@ -28,9 +28,10 @@ import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class BrowseDocument {
     public HBox mainContainer;
@@ -49,17 +50,15 @@ public class BrowseDocument {
     private String viewerCode;
     private String sessionId;
     private boolean isProcessingRemoteChange = false;
-    private boolean isUpdatingUI = false;
-    private final AtomicInteger sequence = new AtomicInteger(0);
+
 
     private CrdtTree crdtTree = new CrdtTree();
-    private int currentUserId = (int) (Math.random() * 1000); // Generate random user ID
+    private int currentUserId = 1; // Or get from authentication
     private Map<Integer, CrdtNode> positionToNodeMap = new HashMap<>();
     private WebSocketHandler myWebSocket = new WebSocketHandler();
 
     @FXML
     public void initialize() {
-        // Initialize CodeArea
         codeArea = new CodeArea();
         codeArea.getStyleClass().add("code-area");
         codeArea.setParagraphGraphicFactory(LineNumberFactory.get(codeArea));
@@ -83,10 +82,64 @@ public class BrowseDocument {
 
         // Initialize WebSocket connection
         myWebSocket.connectToWebSocket();
+        // myWebSocket.subscribeToDocument(sessionId, this::handleRemoteChange);
         subscribeToDocument(sessionId);
-
         // Prompt user to select a file immediately after initialization
         promptForFileSelection();
+    }
+
+    private int getPositionForNode(CrdtNode targetNode) {
+        // Find position of a node in current view
+        for (Map.Entry<Integer, CrdtNode> entry : positionToNodeMap.entrySet()) {
+            if (entry.getValue().equals(targetNode)) {
+                return entry.getKey();
+            }
+        }
+        return -1; // Not found
+    }
+
+    private Timestamp getUniqueTimestamp() {
+        // Base timestamp
+        Timestamp ts = new Timestamp(System.currentTimeMillis());
+
+        // Add nanoTime to handle sub-millisecond operations
+        long nanos = System.nanoTime() % 1_000_000;
+        ts.setNanos((int)nanos);
+
+        return ts;
+    }
+
+    private List<CrdtNode> flattenTree(CrdtNode startNode) {
+        List<CrdtNode> result = new ArrayList<>();
+        if (startNode == null) return result;
+
+        // Add this node
+        if (startNode != crdtTree.getRoot()) {
+            result.add(startNode);
+        }
+
+        // Add all children recursively
+        for (CrdtNode child : startNode.getChildren()) {
+            result.addAll(flattenTree(child));
+        }
+
+        return result;
+    }
+
+    private void updatePositionMapFromTree() {
+        // Get flattened visible nodes from tree
+        List<CrdtNode> flatNodes = flattenTree(crdtTree.getRoot());
+
+        // Clear and rebuild position map
+        positionToNodeMap.clear();
+        int visibleIndex = 0;
+
+        for (CrdtNode node : flatNodes) {
+            if (!node.isDeleted() && node != crdtTree.getRoot()) {
+                positionToNodeMap.put(visibleIndex, node);
+                visibleIndex++;
+            }
+        }
     }
 
     public void subscribeToDocument(String sessionId) {
@@ -117,10 +170,13 @@ public class BrowseDocument {
                                 isProcessingRemoteChange = true;
                                 try {
                                     if (parts[0].equalsIgnoreCase("insert")) {
-                                        processRemoteInsert(parts);
+                                        processInsertOperation(parts);
                                     } else if (parts[0].equalsIgnoreCase("delete")) {
-                                        processRemoteDelete(parts);
+                                        processDeleteOperation(parts);
                                     }
+
+                                    System.out.println("Document Update: " + message);
+                                    updateUIFromCRDT();
                                 } finally {
                                     isProcessingRemoteChange = false;
                                 }
@@ -139,45 +195,55 @@ public class BrowseDocument {
         }
     }
 
-    private void processRemoteInsert(String[] parts) {
-        int position = Integer.parseInt(parts[1]);
-        String insertedText = parts[2];
+    private void processInsertOperation(String[] parts) {
+        try {
+            // Parse operation data
+            int insertPos = Integer.parseInt(parts[1]);
+            char c = parts[2].length() > 0 ? parts[2].charAt(0) : ' ';
+            int userId = Integer.parseInt(parts[3]);
+            Timestamp ts = Timestamp.valueOf(parts[4]);
+            NodeId nodeId = new NodeId(userId, ts);
 
-        // Update the UI directly
-        if (!isUpdatingUI) {
-            isUpdatingUI = true;
-            try {
-                String currentText = codeArea.getText();
-                if (position <= currentText.length()) {
-                    String newText = currentText.substring(0, position) +
-                            insertedText +
-                            currentText.substring(position);
-                    codeArea.replaceText(newText);
-                }
-            } finally {
-                isUpdatingUI = false;
-            }
+            // Find parent node based on position
+            CrdtNode parentNode = findParentNode(insertPos);
+
+            // Create new node
+            CrdtNode newNode = new CrdtNode(nodeId, c);
+
+            // Add to CRDT tree
+            crdtTree.addChild(parentNode.getId(), newNode);
+
+            // Update position map from the tree structure
+            updatePositionMapFromTree();
+
+            System.out.println("Processed insert: '" + c + "' from user " + userId);
+        } catch (Exception e) {
+            System.err.println("Error processing insert operation: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
-    private void processRemoteDelete(String[] parts) {
-        int position = Integer.parseInt(parts[1]);
-        String deletedText = parts[2];
-        int deleteLen = deletedText.length();
+    private void processDeleteOperation(String[] parts) {
+        try {
+            int deletePos = Integer.parseInt(parts[1]);
+            String removed = parts[2];
+            int removedLen = removed.length();
 
-        // Update the UI directly
-        if (!isUpdatingUI) {
-            isUpdatingUI = true;
-            try {
-                String currentText = codeArea.getText();
-                if (position < currentText.length() && position + deleteLen <= currentText.length()) {
-                    String newText = currentText.substring(0, position) +
-                            currentText.substring(position + deleteLen);
-                    codeArea.replaceText(newText);
+            // Mark nodes as deleted
+            for (int i = deletePos; i < deletePos + removedLen; i++) {
+                CrdtNode node = positionToNodeMap.get(i);
+                if (node != null) {
+                    node.setDeleted(true);
                 }
-            } finally {
-                isUpdatingUI = false;
             }
+
+            // Update position map from tree structure
+            updatePositionMapFromTree();
+
+            System.out.println("Processed delete: '" + removed + "' at position " + deletePos);
+        } catch (Exception e) {
+            System.err.println("Error processing delete operation: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -206,7 +272,8 @@ public class BrowseDocument {
     }
 
     public void handleBackBtn() throws IOException {
-        // Clean up WebSocket subscription if needed
+        // Notify server that user is leaving the document
+        // myWebSocket.leaveDocument(sessionId);
 
         FXMLLoader loader = new FXMLLoader(getClass().getResource("hello-view.fxml"));
         Parent root = loader.load();
@@ -251,57 +318,188 @@ public class BrowseDocument {
     public void setupDocument(String content) {
         this.fileContent = content;
 
-        // Set up the text area with content
         if (codeArea != null) {
             codeArea.replaceText(fileContent);
         }
 
-        // Send the initial document state to the server in chunks
-        // This helps avoid overwhelming the server with large documents
-        int chunkSize = 50;
-        for (int i = 0; i < fileContent.length(); i += chunkSize) {
-            int end = Math.min(i + chunkSize, fileContent.length());
-            String chunk = fileContent.substring(i, end);
+        // Clear the old CRDT state
+        positionToNodeMap.clear();
 
+        // Ensure WebSocket is ready before sending updates
+        try {
+            Thread.sleep(50); // Brief delay to ensure connection is ready
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
+        // CRDT Initialization: Insert all as children of root, one after another
+        CrdtNode lastInsertedNode = null;
+
+        // First, build the entire CRDT tree locally
+        for (int i = 0; i < fileContent.length(); i++) {
             Timestamp ts = new Timestamp(System.currentTimeMillis());
-            String changeInfo = "insert,!!" + i + ",!!" + chunk + ",!!" + currentUserId + ",!!" + ts;
-            myWebSocket.updateDocument(sessionId, changeInfo);
+            NodeId newNodeId = new NodeId(
+                    currentUserId,
+                    ts
+            );
 
-            // Add small delay to avoid overwhelming the server
             try {
-                Thread.sleep(50);
+                Thread.sleep(1); // Ensure unique timestamps
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+
+            CrdtNode newNode = new CrdtNode(newNodeId, fileContent.charAt(i));
+
+            // Attach to root or previous
+            if (lastInsertedNode == null) {
+                crdtTree.addChild(crdtTree.getRoot().getId(), newNode);
+            } else {
+                crdtTree.addChild(lastInsertedNode.getId(), newNode);
+            }
+
+            positionToNodeMap.put(i, newNode);
+            lastInsertedNode = newNode;
+        }
+
+        // Now send all updates to the server in a separate loop
+        for (int i = 0; i < fileContent.length(); i++) {
+            CrdtNode node = positionToNodeMap.get(i);
+            String change = "insert,!!" + i + ",!!" + fileContent.charAt(i) + ",!!" +
+                    node.getId().getUserId() + ",!!" + node.getId().getClock();
+            myWebSocket.updateDocument(sessionId, change);
+
+            // Add a small delay between messages to prevent overwhelming the receiver
+            try {
+                Thread.sleep(5);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
         }
 
-        // Set up text change listener
+        crdtTree.printCrdtTree();
         codeArea.plainTextChanges().subscribe(this::handleTextChange);
     }
 
+
+
+
+
+
+
+    private CrdtNode findParentNode(int position) {
+        if (position == 0) return crdtTree.getRoot();
+        for (int i = position - 1; i >= 0; i--) {
+            CrdtNode node = positionToNodeMap.get(i);
+            if (node != null && !node.isDeleted()) {
+                return node;
+            }
+        }
+        return crdtTree.getRoot();
+    }
+
+    private void updateUIFromCRDT() {
+        StringBuilder sb = new StringBuilder();
+        for (CrdtNode child : crdtTree.getRoot().getChildren()) {
+            traverseAndBuildString(child, sb);
+        }
+
+        String newText = sb.toString();
+        if (!newText.equals(codeArea.getText())) {
+            codeArea.replaceText(newText);
+        }
+    }
+
+    private void traverseAndBuildString(CrdtNode node, StringBuilder sb) {
+        if (node == null) return;
+
+        if (!node.isDeleted()) {
+            sb.append(node.getValue());
+        }
+
+        for (CrdtNode child : node.getChildren()) {
+            traverseAndBuildString(child, sb);
+        }
+    }
+
     private void handleTextChange(PlainTextChange change) {
-        // Skip processing if we're currently updating the UI
-        if (isUpdatingUI || isProcessingRemoteChange) return;
+        // Skip processing if this change is from remote update
+        if (isProcessingRemoteChange) {
+            return;
+        }
 
         int insertPos = change.getPosition();
-        String removed = change.getRemoved();
-        String inserted = change.getInserted();
 
-        // Handle deletions
-        if (!removed.isEmpty()) {
-            Timestamp ts = new Timestamp(System.currentTimeMillis());
-            String changeInfo = "delete,!!" + insertPos + ",!!" + removed + ",!!" +
-                    currentUserId + ",!!" + ts + ",!!" + sequence.incrementAndGet();
-            myWebSocket.updateDocument(sessionId, changeInfo);
+        // ----- Handle Deletions -----
+        if (!change.getRemoved().isEmpty()) {
+            int removedLen = change.getRemoved().length();
+
+            // Get the nodes to delete
+            List<CrdtNode> nodesToDelete = new ArrayList<>();
+            for (int i = insertPos; i < insertPos + removedLen; i++) {
+                CrdtNode node = positionToNodeMap.get(i);
+                if (node != null) {
+                    nodesToDelete.add(node);
+                }
+            }
+
+            // Mark each node as deleted
+            for (CrdtNode node : nodesToDelete) {
+                node.setDeleted(true);
+
+                // Send delete operation for each character
+                Timestamp ts = getUniqueTimestamp();
+                String deleteOp = "delete,!!" +
+                        getPositionForNode(node) + ",!!" +
+                        node.getValue() + ",!!" +
+                        currentUserId + ",!!" +
+                        ts;
+                myWebSocket.updateDocument(sessionId, deleteOp);
+            }
+
+            // Update position map
+            updatePositionMapFromTree();
         }
 
-        // Handle insertions
-        if (!inserted.isEmpty()) {
-            Timestamp ts = new Timestamp(System.currentTimeMillis());
-            String changeInfo = "insert,!!" + insertPos + ",!!" + inserted + ",!!" +
-                    currentUserId + ",!!" + ts + ",!!" + sequence.incrementAndGet();
-            myWebSocket.updateDocument(sessionId, changeInfo);
+        // ----- Handle Insertions -----
+        if (!change.getInserted().isEmpty()) {
+            String insertedText = change.getInserted();
+
+            // Find the parent node for the first character
+            CrdtNode parentNode = findParentNode(insertPos);
+
+            // Insert each character as a node in the tree
+            for (int i = 0; i < insertedText.length(); i++) {
+                char c = insertedText.charAt(i);
+
+                // Create unique timestamp
+                Timestamp ts = getUniqueTimestamp();
+
+                // Create new node
+                NodeId newNodeId = new NodeId(currentUserId, ts);
+                CrdtNode newNode = new CrdtNode(newNodeId, c);
+
+                // Add to tree
+                crdtTree.addChild(parentNode.getId(), newNode);
+
+                // Send operation to server with position and parent NodeId
+                String insertOp = "insert,!!" +
+                        (insertPos + i) + ",!!" +
+                        c + ",!!" +
+                        currentUserId + ",!!" +
+                        ts;
+                myWebSocket.updateDocument(sessionId, insertOp);
+
+                // Update parent for next character
+                parentNode = newNode;
+            }
+
+            // Update position map
+            updatePositionMapFromTree();
         }
+
+        crdtTree.printCrdtTree();
+        updateUIFromCRDT();
     }
 
     @FXML
