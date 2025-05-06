@@ -46,6 +46,13 @@ public class NewDocument {
     public Label viewerCodeText;
     public Button copyEditorCodeBtn;
     public Button copyViewerCodeBtn;
+    public Label editor_1;
+    public Label editor_2;
+    public Label editor_3;
+    public Label editor_4;
+
+    public VBox Viewers_Vbox;
+
     private CrdtTree crdtTree = new CrdtTree();
     private int currentUserId = 1; // Or get from authentication
     private Map<Integer, CrdtNode> positionToNodeMap = new HashMap<>();
@@ -88,6 +95,7 @@ public class NewDocument {
 
         editorCodeText.setText(editorCode);
         viewerCodeText.setText(viewerCode);
+        editor_1.setText("Editor: You");
 
         subscribeToDocument(sessionId);
     }
