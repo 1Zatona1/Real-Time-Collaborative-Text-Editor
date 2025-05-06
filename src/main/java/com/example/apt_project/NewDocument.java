@@ -318,8 +318,22 @@ public class NewDocument {
         }
 
         String newText = sb.toString();
-        if (!newText.equals(codeArea.getText())) {
+        String oldText = codeArea.getText();
+
+        if (!newText.equals(oldText)) {
+            // Save caret and anchor positions
+            int caretPosition = codeArea.getCaretPosition();
+            int anchorPosition = codeArea.getAnchor();
+
+            // Replace text
             codeArea.replaceText(newText);
+
+            // Try to restore caret and anchor safely
+            int newLength = newText.length();
+            int newCaretPos = Math.min(caretPosition, newLength);
+            int newAnchorPos = Math.min(anchorPosition, newLength);
+
+            codeArea.selectRange(newAnchorPos, newCaretPos);  // restores both caret and selection
         }
     }
 
