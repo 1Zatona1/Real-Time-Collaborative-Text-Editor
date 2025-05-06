@@ -320,7 +320,7 @@ public class JoinDocument {
             }
 
             Timestamp ts = new Timestamp(System.currentTimeMillis());
-            String Change = "delete," + insertPos + "," + change.getRemoved() + "," + currentUserId + "," + ts;
+            String Change = "delete,!!" + insertPos + ",!!" + change.getRemoved() + ",!!" + currentUserId + ",!!" + ts;
             myWebSocket.updateDocument(sessionId, Change);
         }
 
@@ -359,7 +359,7 @@ public class JoinDocument {
                 parentNode = newNode; // Update parent for next character
 
                 // Send one character at a time with the exact position
-                String Change = "insert," + (insertPos + i) + "," + c + "," + currentUserId + "," + ts;
+                String Change = "insert,!!" + (insertPos + i) + ",!!" + c + ",!!" + currentUserId + ",!!" + ts;
                 System.out.println("Sending change: " + Change);
                 myWebSocket.updateDocument(sessionId, Change);
             }

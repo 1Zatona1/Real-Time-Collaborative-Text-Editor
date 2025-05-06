@@ -36,7 +36,7 @@ public class WebSocketHandler {
             converters.add(new StringMessageConverter());
             stompClient.setMessageConverter(new CompositeMessageConverter(converters));
             // Connect to WebSocket server
-            String url = "ws://192.168.1.10:8080/ws"; // WebSocket endpoint
+            String url = "ws://192.168.1.11:8080/ws"; // WebSocket endpoint
             StompSessionHandler sessionHandler = new MyStompSessionHandler();
             stompSession = stompClient.connect(url, sessionHandler).get();
 
