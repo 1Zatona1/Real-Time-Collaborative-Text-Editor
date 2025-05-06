@@ -103,7 +103,7 @@ public class SessionService {
         Session session = sessions.get(sessionId);
         if (session != null) {
             if ("join".equals(event.getType())) {
-                if ("editor".equals(event.getUserType()) && session.getEditor_count() < 4) {
+                if ("editor".equals(event.getUserType())) {
                     session.incrementEditorCount();
                 } else if ("viewer".equals(event.getUserType())) {
                     session.incrementViewerCount();

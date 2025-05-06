@@ -47,15 +47,10 @@ public class DocumentRestController {
         }
     }
 
-    @GetMapping("/{code}/editors/count")
-    public int getEditorsCount(@PathVariable String code) {
-        SessionService.CodeType type = sessionService.validateCode(code);
-        if (type != SessionService.CodeType.INVALID) {
-            String sessionId = sessionService.getSessionIdByCode(code);
+    @GetMapping("/{sessionId}/editors/count")
+    public int getEditorsCount(@PathVariable String sessionId) {
+
             return sessionService.getEditorsCount(sessionId);
-        } else {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found");
-        }
     }
 
     @GetMapping("/{code}/getid")

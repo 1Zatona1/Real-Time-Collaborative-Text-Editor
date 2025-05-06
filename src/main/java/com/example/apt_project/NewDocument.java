@@ -230,29 +230,36 @@ public class NewDocument {
                         if (payload instanceof String) {
                             System.out.println("ana 4a8al aho wla eh");
 
-                            String message = payload.toString();
-                            String[] parts = message.split(",", -1);
-                            if (parts.length < 3) return;
-                            String typeOfEvent = parts[0];
-                            String userId = parts[1];
-                            String typeOfUser = parts[2];
+                            Platform.runLater(() -> {
+                                String message = payload.toString();
+                                String[] parts = message.split(",", -1);
+                                if (parts.length < 3) return;
+                                String typeOfEvent = parts[0];
+                                String userId = parts[1];
+                                String typeOfUser = parts[2];
 
-                            if (typeOfEvent.equalsIgnoreCase("join")) {
-                                if (typeOfUser.equalsIgnoreCase("editor")) {
-                                    addRandomEditor(userId);
+                                if (typeOfEvent.equalsIgnoreCase("join")) {
+                                    if (typeOfUser.equalsIgnoreCase("editor")) {
+                                        int count = HttpHelper.getNumberOfEditors(sessionId);
+                                        System.out.println("Count now: " + count);
+                                        if (count <= 4) {
+                                            addRandomEditor(userId);
+                                        }
+                                    }
+                                    else if (typeOfUser.equalsIgnoreCase("viewer")) {
+                                        addRandomViewer(userId);
+                                    }
                                 }
-                                else if (typeOfUser.equalsIgnoreCase("viewer")) {
-                                    addRandomViewer(userId);
+                                else if(typeOfEvent.equalsIgnoreCase("leave")) {
+                                    if (typeOfUser.equalsIgnoreCase("editor")) {
+                                        removeEditor(userId);
+                                    }
+                                    else if (typeOfUser.equalsIgnoreCase("viewer")) {
+                                        removeViewer(userId);
+                                    }
                                 }
-                            }
-                            else if(typeOfEvent.equalsIgnoreCase("leave")) {
-                                if (typeOfUser.equals("editor")) {
-                                    removeEditor(userId);
-                                }
-                                else if (typeOfUser.equals("viewer")) {
-                                    removeViewer(userId);
-                                }
-                            }
+                            });
+
                         }
                     }
                 });
@@ -266,6 +273,7 @@ public class NewDocument {
             System.out.println("Not connected to WebSocket server");
         }
     }
+
     private void processInsertOperation(String[] parts) {
         int insertPos = Integer.parseInt(parts[1]);
         char c = parts[2].charAt(0);
@@ -320,6 +328,9 @@ public class NewDocument {
 
     public void handleBackBtn() throws IOException
     {
+        String userEvent = "leave," + currentUserId + "," + "editor";
+        myWebSocket.updateUserEvent(sessionId, userEvent);
+
         FXMLLoader loader = new FXMLLoader(getClass().getResource("hello-view.fxml"));
         Parent root = loader.load();
 

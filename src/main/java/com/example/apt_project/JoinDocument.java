@@ -31,6 +31,7 @@ import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 public class JoinDocument {
     @FXML
@@ -42,7 +43,7 @@ public class JoinDocument {
     public Button backBtn;
 
     private CrdtTree crdtTree = new CrdtTree();
-    private int currentUserId = 2; // Or get from authentication
+    private int currentUserId = (int)(Math.random() * 1000);// Or get from authentication
     private Map<Integer, CrdtNode> positionToNodeMap = new HashMap<>();
     private String sessionCode;
     private String editorCode;
@@ -74,6 +75,14 @@ public class JoinDocument {
         }
 
     }
+
+    public void handleWindowClose()
+    {
+        String userType = codeArea.isEditable() ? "editor" : "viewer";
+        String userEvent = "leave," + currentUserId + "," + userType;
+        myWebSocket.updateUserEvent(sessionId, userEvent);
+    }
+
 
     private CrdtNode findParentNode(int position) {
         if (position == 0) return crdtTree.getRoot();
@@ -163,8 +172,10 @@ public class JoinDocument {
         myWebSocket.connectToWebSocket();
         StompSession stompSession = myWebSocket.getStompSession();
 
-        String eventStr = "join,2,editor";
-        myWebSocket.updateUserEvent(sessionCode, eventStr);
+        String userType = codeArea.isEditable() ? "editor" : "viewer";
+        System.out.println("ya3am enta no3ak eh: " + userType);
+        String eventStr = "join," + currentUserId + "," + userType;
+        myWebSocket.updateUserEvent(sessionId, eventStr);
 
         if (stompSession != null && stompSession.isConnected()) {
             try {
@@ -274,6 +285,12 @@ public class JoinDocument {
     }
 
     public void handleBackBtn() throws IOException {
+
+        String userType = codeArea.isDisabled() ? "viewer" : "editor";
+        String userEvent = "leave," + currentUserId + "," + userType;
+        myWebSocket.updateUserEvent(sessionId, userEvent);
+
+
         FXMLLoader loader = new FXMLLoader(getClass().getResource("hello-view.fxml"));
         Parent root = loader.load();
 

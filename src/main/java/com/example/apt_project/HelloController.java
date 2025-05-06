@@ -101,7 +101,7 @@ public class HelloController {
         Stage mainStage = (Stage) joinBtn.getScene().getWindow();
         mainStage.close();
 
-        JoinDocument controller = loader.getController();
+        final JoinDocument controller = loader.getController();
         controller.setUpDocument(allOperations, sessionId, sessionField.getText());
 
         Stage newDocStage = new Stage();
@@ -111,6 +111,14 @@ public class HelloController {
         newDocStage.setScene(newDocScene);
         newDocStage.show();
         newDocStage.setMaximized(true);
+
+        newDocStage.setOnCloseRequest(event -> {
+            // Run your cleanup code here (e.g., notify server, close sockets)
+            System.out.println("User is closing the window");
+
+            // Optional: access the controller if needed
+            controller.handleWindowClose(); // define this method in your controller if needed
+        });
 
     }
 

@@ -12,7 +12,7 @@ import java.util.List;
 
 public class HttpHelper {
     private static final RestTemplate restTemplate= new RestTemplate();
-    private static final String baseUrl = "http://192.168.1.11:8080/";
+    private static final String baseUrl = "http://192.168.1.10:8080/";
 
     public static String createDocument() {
 
@@ -54,6 +54,18 @@ public class HttpHelper {
         } catch (Exception e) {
             System.out.println("Failed to get session id with error " + e.getMessage());
             return null;
+        }
+    }
+
+    public static int getNumberOfEditors(String code) {
+        String url = baseUrl + "api/documents/" + code + "/editors/count";
+        try {
+            int response = restTemplate.getForObject(url, Integer.class);
+            return response;
+        }
+        catch (Exception e) {
+            System.out.println("Failed to get session id with error " + e.getMessage());
+            return -1;
         }
     }
 
