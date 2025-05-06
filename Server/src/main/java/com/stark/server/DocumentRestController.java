@@ -33,7 +33,7 @@ public class DocumentRestController {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found");
             }
             return operations.stream()
-                    .map(op -> String.join(",!!",
+                    .map(op -> String.join(",",
                             op.getType(),
                             String.valueOf(op.getPosition()),
                             op.getTextChanged() == null ? "" : op.getTextChanged(),
