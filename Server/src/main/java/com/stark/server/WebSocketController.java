@@ -24,7 +24,7 @@ public class WebSocketController {
     }
 
     private Operation parseOperation(String str) {
-        String[] parts = str.split(",", -1); // -1 to include trailing empty strings
+        String[] parts = str.split(",!!", -1); // -1 to include trailing empty strings
         Operation op = new Operation();
         op.setType(parts[0]);
         op.setPosition(Integer.parseInt(parts[1]));
