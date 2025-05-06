@@ -32,11 +32,8 @@
                <Button fx:id="copyEditorCodeBtn" mnemonicParsing="false" onAction="#handleCopyEditorCode" text="Copy" styleClass="btn-success, btn-small" />
             </HBox>
             <!-- Editor List Placeholder -->
-            <VBox spacing="3">
+            <VBox fx:id="editorListContainer" spacing="3">
                <Label text="Editor: " fx:id="editor_1" />
-               <Label text="Editor: " fx:id="editor_2"/>
-               <Label text="Editor: " fx:id="editor_3" />
-               <Label text="Editor: " fx:id="editor_4" />
             </VBox>
          </VBox>
 
@@ -47,9 +44,8 @@
                <Label fx:id="viewerCodeText" styleClass="code-text" text="EFGH-5678" />
                <Button fx:id="copyViewerCodeBtn" mnemonicParsing="false" onAction="#handleCopyViewerCode" text="Copy" styleClass="btn-success, btn-small" />
             </HBox>
-            <!-- Viewer List Placeholder -->
-            <VBox spacing="3" fx:id="Viewers_Vbox">
-
+            <VBox fx:id="viewerListContainer" spacing="3">
+               <!-- Labels for viewers will be added here dynamically -->
             </VBox>
          </VBox>
       </VBox>

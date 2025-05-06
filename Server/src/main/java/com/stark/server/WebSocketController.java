@@ -55,7 +55,7 @@ public class WebSocketController {
         String[] parts = eventStr.split(",", -1);
         UserEvent event = new UserEvent(parts[0], Integer.parseInt(parts[1]), parts[2]);
         sessionService.handleUserEvent(sessionId, event);
-
+        System.out.println("Broadcast event: " + eventStr);
         messagingTemplate.convertAndSend("/topic/userEvent/" + sessionId, eventStr);
     }
 

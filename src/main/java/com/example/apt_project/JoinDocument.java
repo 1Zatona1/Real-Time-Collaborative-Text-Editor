@@ -42,7 +42,7 @@ public class JoinDocument {
     public Button backBtn;
 
     private CrdtTree crdtTree = new CrdtTree();
-    private int currentUserId = 3; // Or get from authentication
+    private int currentUserId = 2; // Or get from authentication
     private Map<Integer, CrdtNode> positionToNodeMap = new HashMap<>();
     private String sessionCode;
     private String editorCode;
@@ -72,6 +72,7 @@ public class JoinDocument {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+
     }
 
     private CrdtNode findParentNode(int position) {
@@ -88,6 +89,7 @@ public class JoinDocument {
     public void setUpDocument(List<String> myOperations, String ss, String userCode) {
         positionToNodeMap.clear(); // Clear old state
         sessionId = ss;
+
         if (userCode.startsWith("V"))
         {
             codeArea.setEditable(false);
@@ -160,6 +162,9 @@ public class JoinDocument {
     public void subscribeToDocument(String sessionId) {
         myWebSocket.connectToWebSocket();
         StompSession stompSession = myWebSocket.getStompSession();
+
+        String eventStr = "join,2,editor";
+        myWebSocket.updateUserEvent(sessionCode, eventStr);
 
         if (stompSession != null && stompSession.isConnected()) {
             try {
@@ -431,21 +436,4 @@ public class JoinDocument {
         }
     }
 
-    public void handleCopyEditorCode() {
-        if (editorCode != null && !editorCode.isEmpty()) {
-            final Clipboard clipboard = Clipboard.getSystemClipboard();
-            final ClipboardContent content = new ClipboardContent();
-            content.putString(editorCode);
-            clipboard.setContent(content);
-        }
-    }
-
-    public void handleCopyViewerCode() {
-        if (viewerCode != null && !viewerCode.isEmpty()) {
-            final Clipboard clipboard = Clipboard.getSystemClipboard();
-            final ClipboardContent content = new ClipboardContent();
-            content.putString(viewerCode);
-            clipboard.setContent(content);
-        }
-    }
 }

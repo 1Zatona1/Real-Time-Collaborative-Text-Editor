@@ -51,7 +51,9 @@ public class NewDocument {
     public Label editor_3;
     public Label editor_4;
 
-    public VBox Viewers_Vbox;
+    public VBox editorListContainer;
+    public VBox viewerListContainer;
+    private final Set<String> usedNames = new HashSet<>();
 
     private CrdtTree crdtTree = new CrdtTree();
     private int currentUserId = 1; // Or get from authentication
@@ -97,7 +99,65 @@ public class NewDocument {
         viewerCodeText.setText(viewerCode);
         editor_1.setText("Editor: You");
 
+        subscribeToUserEvent(sessionId);
         subscribeToDocument(sessionId);
+    }
+
+    private String getUniqueUsername() {
+        String name;
+        do {
+            name = UsernameGenerator.generateAnonymousUsername();
+        } while (usedNames.contains(name));
+        usedNames.add(name);
+        return name;
+    }
+
+    public void addRandomEditor(String userId) {
+        String username = getUniqueUsername();
+        addEditor(username, userId);
+    }
+
+    public void addRandomViewer(String userId) {
+        String username = getUniqueUsername();
+        addViewer(username, userId);
+    }
+
+    public void addEditor(String username, String userId) {
+        Label label = new Label("Editor: " + username + " " + userId);
+        label.getStyleClass().add("user-label"); // optional style class
+        editorListContainer.getChildren().add(label);
+    }
+
+    public void addViewer(String username, String userId) {
+        Label label = new Label("Viewer: " + username + " " + userId);
+        label.getStyleClass().add("user-label"); // optional style class
+        viewerListContainer.getChildren().add(label);
+    }
+
+    public void removeEditor(String userId) {
+        Label toRemove = null;
+        for (javafx.scene.Node node : editorListContainer.getChildren()) {
+            if (node instanceof Label label && label.getText().contains(userId)) {
+                toRemove = label;
+                break;
+            }
+        }
+        if (toRemove != null) {
+            editorListContainer.getChildren().remove(toRemove);
+        }
+    }
+
+    public void removeViewer(String userId) {
+        Label toRemove = null;
+        for (javafx.scene.Node node : viewerListContainer.getChildren()) {
+            if (node instanceof Label label && label.getText().contains(userId)) {
+                toRemove = label;
+                break;
+            }
+        }
+        if (toRemove != null) {
+            viewerListContainer.getChildren().remove(toRemove);
+        }
     }
 
     public void subscribeToDocument(String sessionId) {
@@ -153,6 +213,59 @@ public class NewDocument {
         }
     }
 
+    public void subscribeToUserEvent(String sessionId){
+        StompSession stompSession = myWebSocket.getStompSession();
+
+        if (stompSession != null && stompSession.isConnected()) {
+            try {
+                String topic = "/topic/userEvent/" + sessionId;
+                stompSession.subscribe(topic, new StompFrameHandler() {
+                    @Override
+                    public Type getPayloadType(StompHeaders headers) {
+                        return String.class;
+                    }
+
+                    @Override
+                    public void handleFrame(StompHeaders headers, Object payload) {
+                        if (payload instanceof String) {
+                            System.out.println("ana 4a8al aho wla eh");
+
+                            String message = payload.toString();
+                            String[] parts = message.split(",", -1);
+                            if (parts.length < 3) return;
+                            String typeOfEvent = parts[0];
+                            String userId = parts[1];
+                            String typeOfUser = parts[2];
+
+                            if (typeOfEvent.equalsIgnoreCase("join")) {
+                                if (typeOfUser.equalsIgnoreCase("editor")) {
+                                    addRandomEditor(userId);
+                                }
+                                else if (typeOfUser.equalsIgnoreCase("viewer")) {
+                                    addRandomViewer(userId);
+                                }
+                            }
+                            else if(typeOfEvent.equalsIgnoreCase("leave")) {
+                                if (typeOfUser.equals("editor")) {
+                                    removeEditor(userId);
+                                }
+                                else if (typeOfUser.equals("viewer")) {
+                                    removeViewer(userId);
+                                }
+                            }
+                        }
+                    }
+                });
+
+                System.out.println("Subscribed to document " + sessionId);
+            } catch (Exception e) {
+                System.out.println("Failed to subscribe to document: " + e.getMessage());
+                e.printStackTrace();
+            }
+        } else {
+            System.out.println("Not connected to WebSocket server");
+        }
+    }
     private void processInsertOperation(String[] parts) {
         int insertPos = Integer.parseInt(parts[1]);
         char c = parts[2].charAt(0);

@@ -36,7 +36,7 @@ public class WebSocketHandler {
             converters.add(new StringMessageConverter());
             stompClient.setMessageConverter(new CompositeMessageConverter(converters));
             // Connect to WebSocket server
-            String url = "ws://192.168.1.11:8080/ws"; // WebSocket endpoint
+            String url = "ws://192.168.1.10:8080/ws"; // WebSocket endpoint
             StompSessionHandler sessionHandler = new MyStompSessionHandler();
             stompSession = stompClient.connect(url, sessionHandler).get();
 
@@ -52,6 +52,22 @@ public class WebSocketHandler {
                 stompSession.send(destination, Change);
             } catch (Exception e) {
                 System.out.println("Failed to send document update: " + e.getMessage());
+            }
+        } else {
+            System.out.println("Not connected to WebSocket server");
+        }
+    }
+
+
+    public void updateUserEvent(String sessionId, String eventstr)
+    {
+        if (stompSession != null && stompSession.isConnected()) {
+            try {
+                String destination = "/app/userEvent/" + sessionId ;
+                stompSession.send(destination, eventstr);
+                System.out.println("kolo tamam ya bahsa");
+            } catch (Exception e) {
+                System.out.println("Failed to update user event: " + e.getMessage());
             }
         } else {
             System.out.println("Not connected to WebSocket server");
