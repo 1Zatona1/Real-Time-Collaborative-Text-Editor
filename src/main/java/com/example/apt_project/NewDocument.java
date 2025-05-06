@@ -108,7 +108,7 @@ public class NewDocument {
                     public void handleFrame(StompHeaders headers, Object payload) {
                         if (payload instanceof String) {
                             String message = payload.toString();
-                            String[] parts = message.split(",", -1);
+                            String[] parts = message.split(",!!", -1);
 
                             if (parts.length < 5) return; // Skip invalid messages
 
@@ -248,7 +248,7 @@ public class NewDocument {
             }
 
             Timestamp ts = new Timestamp(System.currentTimeMillis());
-            String Change = "delete," + insertPos + "," + change.getRemoved() + "," + currentUserId + "," + ts;
+            String Change = "delete,!!" + insertPos + ",!!" + change.getRemoved() + ",!!" + currentUserId + ",!!" + ts;
             myWebSocket.updateDocument(sessionId, Change);
         }
 
@@ -290,7 +290,7 @@ public class NewDocument {
 
                 parentNode = newNode; // Update parent for next character
 
-                String Change = "insert," + (insertPos + i) + "," + c + "," + currentUserId + "," + ts;
+                String Change = "insert,!!" + (insertPos + i) + ",!!" + c + ",!!" + currentUserId + ",!!" + ts;
                 myWebSocket.updateDocument(sessionId, Change);
             }
         }
