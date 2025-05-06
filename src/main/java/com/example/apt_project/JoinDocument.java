@@ -286,7 +286,7 @@ public class JoinDocument {
 
     public void handleBackBtn() throws IOException {
 
-        String userType = codeArea.isDisabled() ? "viewer" : "editor";
+        String userType = codeArea.isEditable() ? "viewer" : "editor";
         String userEvent = "leave," + currentUserId + "," + userType;
         myWebSocket.updateUserEvent(sessionId, userEvent);
 
