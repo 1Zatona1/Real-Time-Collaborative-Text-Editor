@@ -102,7 +102,7 @@ public class BrowseDocument {
                     public void handleFrame(StompHeaders headers, Object payload) {
                         if (payload instanceof String) {
                             String message = payload.toString();
-                            String[] parts = message.split(",", -1);
+                            String[] parts = message.split(",!!", -1);
 
                             if (parts.length < 5) return; // Skip invalid messages
 
@@ -293,26 +293,20 @@ public class BrowseDocument {
             } else {
                 crdtTree.addChild(lastInsertedNode.getId(), newNode);
             }
-            String Change = "insert," + i + "," + fileContent.charAt(i) + "," + currentUserId + "," + ts;
+            String Change = "insert,!!" + i + ",!!" + fileContent.charAt(i) + ",!!" + currentUserId + ",!!" + ts;
             myWebSocket.updateDocument(sessionId, Change);
             positionToNodeMap.put(i, newNode);
             lastInsertedNode = newNode;
         }
 
         // Send the initial document state to the server
-        if (!fileContent.isEmpty()) {
-            Timestamp ts = new Timestamp(System.currentTimeMillis());
-            String initialChange = "initialize," + 0 + "," + fileContent + "," + currentUserId + "," + ts;
-            myWebSocket.updateDocument(sessionId, initialChange);
-        }
-
         // Set up text change listener
         codeArea.plainTextChanges().subscribe(this::handleTextChange);
     }
 
     private void handleRemoteChange(String changeInfo) {
         // Parse the change info received from WebSocket
-        String[] parts = changeInfo.split(",");
+        String[] parts = changeInfo.split(",!!");
         if (parts.length < 5) return;
 
         String operation = parts[0];
@@ -470,7 +464,7 @@ public class BrowseDocument {
             }
 
             Timestamp ts = new Timestamp(System.currentTimeMillis());
-            String changeInfo = "delete," + insertPos + "," + change.getRemoved() + "," + currentUserId + "," + ts;
+            String changeInfo = "delete,!!" + insertPos + ",!!" + change.getRemoved() + ",!!" + currentUserId + ",!!" + ts;
             myWebSocket.updateDocument(sessionId, changeInfo);
         }
 
@@ -511,7 +505,7 @@ public class BrowseDocument {
 
             // Send the change to the server
             Timestamp ts = new Timestamp(System.currentTimeMillis());
-            String changeInfo = "insert," + insertPos + "," + insertedText + "," + currentUserId + "," + ts;
+            String changeInfo = "insert,!!" + insertPos + ",!!" + insertedText + ",!!" + currentUserId + ",!!" + ts;
             myWebSocket.updateDocument(sessionId, changeInfo);
         }
     }

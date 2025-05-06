@@ -12,7 +12,7 @@ import java.util.List;
 
 public class HttpHelper {
     private static final RestTemplate restTemplate= new RestTemplate();
-    private static final String baseUrl = "http://localhost:8080/";
+    private static final String baseUrl = "http://192.168.1.11:8080/";
 
     public static String createDocument() {
 
