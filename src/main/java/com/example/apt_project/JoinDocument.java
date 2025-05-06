@@ -42,7 +42,7 @@ public class JoinDocument {
     public Button backBtn;
 
     private CrdtTree crdtTree = new CrdtTree();
-    private int currentUserId = 2; // Or get from authentication
+    private int currentUserId = 3; // Or get from authentication
     private Map<Integer, CrdtNode> positionToNodeMap = new HashMap<>();
     private String sessionCode;
     private String editorCode;
@@ -93,7 +93,7 @@ public class JoinDocument {
             codeArea.setEditable(false);
         }
         for (String opString : myOperations) {
-            String[] parts = opString.split(",", -1);
+            String[] parts = opString.split(",!!", -1);
             if (parts.length < 5) continue; // Skip invalid entries
 
             String type = parts[0];
@@ -320,7 +320,7 @@ public class JoinDocument {
             }
 
             Timestamp ts = new Timestamp(System.currentTimeMillis());
-            String Change = "delete,!!" + insertPos + ",!!" + change.getRemoved() + ",!!" + currentUserId + ",!!" + ts;
+            String Change = "delete," + insertPos + "," + change.getRemoved() + "," + currentUserId + "," + ts;
             myWebSocket.updateDocument(sessionId, Change);
         }
 
@@ -359,7 +359,7 @@ public class JoinDocument {
                 parentNode = newNode; // Update parent for next character
 
                 // Send one character at a time with the exact position
-                String Change = "insert,!!" + (insertPos + i) + ",!!" + c + ",!!" + currentUserId + ",!!" + ts;
+                String Change = "insert," + (insertPos + i) + "," + c + "," + currentUserId + "," + ts;
                 System.out.println("Sending change: " + Change);
                 myWebSocket.updateDocument(sessionId, Change);
             }
