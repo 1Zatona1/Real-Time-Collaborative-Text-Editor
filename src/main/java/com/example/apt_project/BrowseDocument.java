@@ -28,10 +28,7 @@ import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.Timestamp;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class BrowseDocument {
     public HBox mainContainer;
@@ -413,22 +410,21 @@ public class BrowseDocument {
         // Clear the old CRDT state
         positionToNodeMap.clear();
 
-        // CRDT Initialization: Insert all as children of root, one after another
+        // Check if WebSocket is connected before proceeding
+
+
+        // Use a buffer to batch updates rather than sending them one by one
+        List<String> pendingChanges = new ArrayList<>();
         CrdtNode lastInsertedNode = null;
+        int uniqueCounter = 0; // For ensuring unique timestamps
 
+        // CRDT Initialization: Insert all as children of root, one after another
         for (int i = 0; i < fileContent.length(); i++) {
+            // Create a timestamp with additional uniqueness
             Timestamp ts = new Timestamp(System.currentTimeMillis());
-            NodeId newNodeId = new NodeId(
-                    currentUserId,
-                    ts
-            );
+            ts.setNanos(uniqueCounter++); // Ensure unique timestamps without sleeping
 
-            try {
-                Thread.sleep(1); // Ensure unique timestamps
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-
+            NodeId newNodeId = new NodeId(currentUserId, ts);
             CrdtNode newNode = new CrdtNode(newNodeId, fileContent.charAt(i));
 
             // Attach to root or previous
@@ -437,20 +433,40 @@ public class BrowseDocument {
             } else {
                 crdtTree.addChild(lastInsertedNode.getId(), newNode);
             }
-            String Change = "insert,!!" + i + ",!!" + fileContent.charAt(i) + ",!!" + currentUserId + ",!!" + ts;
-            myWebSocket.updateDocument(sessionId, Change);
+
+            // Create change but collect in buffer instead of sending immediately
+            String change = "insert,!!" + i + ",!!" + fileContent.charAt(i) +
+                    ",!!" + currentUserId + ",!!" + ts;
+            pendingChanges.add(change);
+
             positionToNodeMap.put(i, newNode);
             lastInsertedNode = newNode;
         }
 
-        // Send the initial document state to the server
-        if (!fileContent.isEmpty()) {
-            Timestamp ts = new Timestamp(System.currentTimeMillis());
-            String initialChange = "initialize,!!" + 0 + ",!!" + fileContent + ",!!" + currentUserId + ",!!" + ts;
-            myWebSocket.updateDocument(sessionId, initialChange);
+        // Now send the changes in batches to avoid overwhelming the WebSocket
+        try {
+            final int BATCH_SIZE = 50; // Adjust based on your application's needs
+            for (int i = 0; i < pendingChanges.size(); i += BATCH_SIZE) {
+                int endIndex = Math.min(i + BATCH_SIZE, pendingChanges.size());
+                List<String> batch = pendingChanges.subList(i, endIndex);
+
+                for (String change : batch) {
+                    myWebSocket.updateDocument(sessionId, change);
+                    try {
+                        Thread.sleep(5);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error sending document updates: " + e.getMessage());
+            // Consider recovery options here
         }
 
         // Set up text change listener
+        crdtTree.printCrdtTree();
         codeArea.plainTextChanges().subscribe(this::handleTextChange);
     }
 
@@ -551,23 +567,33 @@ public class BrowseDocument {
     private boolean isUpdatingUI = false;
 
     private void updateUIFromCRDT() {
-        if (isUpdatingUI) return; // Prevent recursive calls
-
-        isUpdatingUI = true;
-
         StringBuilder sb = new StringBuilder();
         for (CrdtNode child : crdtTree.getRoot().getChildren()) {
             traverseAndBuildString(child, sb);
         }
 
-        String currentText = codeArea.getText();
         String newText = sb.toString();
+        String oldText = codeArea.getText();
 
-        if (!currentText.equals(newText)) {
-            codeArea.replaceText(newText);
+        if (!newText.equals(oldText)) {
+            if (isProcessingRemoteChange) {
+                // Just replace the text without affecting the local cursor
+                int caretPosition = codeArea.getCaretPosition();
+                int anchorPosition = codeArea.getAnchor();
+
+                codeArea.replaceText(newText);
+
+                // Restore caret & selection to what they were before remote update
+                int newLength = newText.length();
+                int newCaretPos = Math.min(caretPosition, newLength);
+                int newAnchorPos = Math.min(anchorPosition, newLength);
+                codeArea.selectRange(newAnchorPos, newCaretPos);
+
+            } else {
+                // Local change (e.g. undo/redo/import): allow cursor to adapt
+                codeArea.replaceText(newText);
+            }
         }
-
-        isUpdatingUI = false;
     }
 
     private void traverseAndBuildString(CrdtNode node, StringBuilder sb) {

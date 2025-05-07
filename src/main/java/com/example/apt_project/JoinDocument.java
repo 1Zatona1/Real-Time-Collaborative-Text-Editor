@@ -354,7 +354,16 @@ public class JoinDocument {
                                 }
                                 else if(typeOfEvent.equalsIgnoreCase("leave")) {
                                     if (typeOfUser.equalsIgnoreCase("editor")) {
+                                        System.out.println("gy menak wla eh");
+
                                         removeEditor(userId);
+                                        if (Integer.parseInt(userId) == 1)
+                                        {
+                                            Platform.runLater(() -> {
+                                                Stage stage = (Stage) sidebar.getScene().getWindow();
+                                                stage.close();
+                                            });
+                                        }
                                     }
                                     else if (typeOfUser.equalsIgnoreCase("viewer")) {
                                         removeViewer(userId);
