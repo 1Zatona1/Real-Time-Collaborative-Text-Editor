@@ -70,7 +70,6 @@ public class JoinDocument {
 
         mainContainer.getChildren().add(1, codeArea);
 
-
         try {
             Thread.sleep(200); // Ensure unique timestamp
         } catch (InterruptedException e) {
@@ -155,36 +154,9 @@ public class JoinDocument {
         return crdtTree.getRoot();
     }
 
-    public void handleBackBtn() throws IOException {
-
-        String userType = codeArea.isEditable() ? "viewer" : "editor";
-        String userEvent = "leave," + currentUserId + "," + userType;
-        myWebSocket.updateUserEvent(sessionId, userEvent);
-
-
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("hello-view.fxml"));
-        Parent root = loader.load();
-
-        Stage currentStage = (Stage) backBtn.getScene().getWindow();
-        currentStage.close();
-
-        Stage newStage = new Stage();
-        Scene scene = new Scene(root, 800, 600);
-        scene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
-
-        newStage.setTitle("Real-Time Collaborative Text Editor");
-        newStage.setScene(scene);
-
-        newStage.show();
-        newStage.setMaximized(true);
-    }
-
-    public void setUpDocument(List<String> myOperations, String ss, String userCode) throws IOException{
+    public void setUpDocument(List<String> myOperations, String ss, String userCode) {
         positionToNodeMap.clear(); // Clear old state
         sessionId = ss;
-
-
-
 
         if (userCode.startsWith("V"))
         {
@@ -442,7 +414,29 @@ public class JoinDocument {
         System.out.println("Processed delete: '" + removed + "' at position " + deletePos);
     }
 
+    public void handleBackBtn() throws IOException {
 
+        String userType = codeArea.isEditable() ? "viewer" : "editor";
+        String userEvent = "leave," + currentUserId + "," + userType;
+        myWebSocket.updateUserEvent(sessionId, userEvent);
+
+
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("hello-view.fxml"));
+        Parent root = loader.load();
+
+        Stage currentStage = (Stage) backBtn.getScene().getWindow();
+        currentStage.close();
+
+        Stage newStage = new Stage();
+        Scene scene = new Scene(root, 800, 600);
+        scene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
+
+        newStage.setTitle("Real-Time Collaborative Text Editor");
+        newStage.setScene(scene);
+
+        newStage.show();
+        newStage.setMaximized(true);
+    }
 
     private void handleTextChange(PlainTextChange change) {
         // Skip processing if this change is from remote update
