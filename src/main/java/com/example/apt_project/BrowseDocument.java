@@ -610,7 +610,7 @@ public class BrowseDocument {
 
     private void handleTextChange(PlainTextChange change) {
         // Skip processing if we're currently updating the UI from CRDT
-        if (isUpdatingUI) return;
+        if (isProcessingRemoteChange) return;
 
         int insertPos = change.getPosition();
 
