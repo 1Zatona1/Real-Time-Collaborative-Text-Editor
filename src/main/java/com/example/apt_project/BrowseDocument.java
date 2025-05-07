@@ -337,9 +337,23 @@ public class BrowseDocument {
                 setupDocument(fileContent);
             }
         } else {
-            // User cancelled file selection, set empty content
-            fileContent = "";
-            setupDocument(fileContent);
+            Stage currentStage = (Stage) codeArea.getScene().getWindow();
+            currentStage.close();
+
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("Hello.fxml")); // Main page
+                Parent root = loader.load();
+
+                Stage mainStage = new Stage();
+                Scene scene = new Scene(root);
+                scene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
+
+                mainStage.setTitle("Real-Time Collaborative Text Editor");
+                mainStage.setScene(scene);
+                mainStage.show();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 

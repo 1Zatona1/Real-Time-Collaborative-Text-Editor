@@ -13,11 +13,10 @@ import javafx.scene.image.ImageView;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
+
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 
 public class HelloController {
 
@@ -32,10 +31,8 @@ public class HelloController {
     public Label sessionLabel;
 
     @FXML
-    private Label errorLabel;
     public Label titleLabel;
-    public File userFile;
-    public String userFileContent;
+
 
     @FXML
     public void handleNewDocBtn() throws IOException {
@@ -57,20 +54,16 @@ public class HelloController {
     }
 
     public void handleBrowse() throws IOException {
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Select a text file (.txt)");
-        FileChooser.ExtensionFilter extFilter = new FileChooser.ExtensionFilter("Text files (*.txt)", "*.txt");
-        fileChooser.getExtensionFilters().add(extFilter);
 
-        Stage browseDocStage = new Stage();
 
+        // Now proceed with loading the next scene
         FXMLLoader loader = new FXMLLoader(getClass().getResource("BrowseDocument.fxml"));
         Parent root = loader.load();
 
         Stage mainStage = (Stage) browseBtn.getScene().getWindow();
         mainStage.close();
 
-
+        Stage browseDocStage = new Stage();
         Scene browseDocScene = new Scene(root);
         browseDocScene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
         browseDocStage.setTitle("Real-Time Collaborative Text Editor");
@@ -85,11 +78,24 @@ public class HelloController {
         List<String> allOperations = HttpHelper.getListOfOperation(sessionField.getText());
         if (allOperations == null) {
             // Code to handle error message
-            errorLabel.setText("Invalid session code. Please try again.");
-            errorLabel.setVisible(true);
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Invalid session code");
+            alert.setHeaderText(null);
+            alert.setContentText("Please enter a valid session code");
+            alert.showAndWait();
             return;
         }
         String sessionId = HttpHelper.getDocumentIdByCode(sessionField.getText());
+        int numEditors = HttpHelper.getNumberOfEditors(sessionId);
+        if (numEditors == 4 && sessionField.getText().startsWith("E")) {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Maximum Editors Reached");
+            alert.setHeaderText(null);
+            alert.setContentText("This session already has the maximum number of 4 editors.");
+            alert.showAndWait();
+            return;
+        }
+
 
         System.out.println(allOperations);
 

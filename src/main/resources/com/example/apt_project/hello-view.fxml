@@ -8,56 +8,104 @@
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.RowConstraints?>
+<?import javafx.geometry.Insets?>
 
-<GridPane alignment="CENTER" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.apt_project.HelloController">
+<GridPane alignment="CENTER" prefHeight="500.0" prefWidth="800.0" hgap="20" vgap="15"
+          style="-fx-background-color: #f8f9fa;"
+          xmlns="http://javafx.com/javafx/23.0.1"
+          xmlns:fx="http://javafx.com/fxml/1"
+          fx:controller="com.example.apt_project.HelloController">
 
-    <!-- Column Constraints (Make sure elements are centered) -->
+    <!-- Add padding around the entire grid -->
+    <padding>
+        <Insets top="20" right="30" bottom="30" left="30"/>
+    </padding>
+
+    <!-- Column Constraints (Equal width columns with proper alignment) -->
     <columnConstraints>
-        <ColumnConstraints halignment="CENTER" />
-        <ColumnConstraints halignment="CENTER" />
-        <ColumnConstraints halignment="CENTER" />
+        <ColumnConstraints halignment="CENTER" percentWidth="33" />
+        <ColumnConstraints halignment="CENTER" percentWidth="33" />
+        <ColumnConstraints halignment="CENTER" percentWidth="33" />
     </columnConstraints>
 
-    <!-- Row Constraints -->
+    <!-- Row Constraints with proper spacing -->
     <rowConstraints>
-      <RowConstraints minHeight="10.0" prefHeight="150.0" />
-        <RowConstraints prefHeight="150.0" />  <!-- Image Row -->
-        <RowConstraints prefHeight="30.0" />   <!-- Label Row -->
-        <RowConstraints prefHeight="50.0" />   <!-- Input Field Row (Only for Join Section) -->
-        <RowConstraints prefHeight="50.0" />   <!-- Buttons Row -->
+        <RowConstraints prefHeight="60.0" valignment="CENTER" /> <!-- Title Row -->
+        <RowConstraints prefHeight="20.0" /> <!-- Spacing -->
+        <RowConstraints prefHeight="180.0" valignment="CENTER" /> <!-- Image Row -->
+        <RowConstraints prefHeight="30.0" valignment="BOTTOM" /> <!-- Label Row -->
+        <RowConstraints prefHeight="40.0" valignment="CENTER" /> <!-- Input Field Row -->
+        <RowConstraints prefHeight="20.0" /> <!-- Error message space -->
+        <RowConstraints prefHeight="50.0" valignment="CENTER" /> <!-- Buttons Row -->
     </rowConstraints>
 
-    <!-- ImageViews -->
-    <ImageView fx:id="newDocImg" fitHeight="150.0" fitWidth="200.0" pickOnBounds="true" preserveRatio="true" GridPane.columnIndex="0" GridPane.rowIndex="1">
+    <!-- Title at the top spanning all columns -->
+    <Label fx:id="titleLabel"
+           text="Welcome to our Real-Time Collaborative Text Editor"
+           GridPane.columnIndex="0"
+           GridPane.rowIndex="0"
+           GridPane.columnSpan="3"
+           GridPane.halignment="CENTER"
+           style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" />
+
+    <!-- ImageViews with consistent sizing -->
+    <ImageView fx:id="newDocImg" fitHeight="150.0" fitWidth="200.0" pickOnBounds="true" preserveRatio="true"
+               GridPane.columnIndex="0" GridPane.rowIndex="2" GridPane.halignment="CENTER">
         <Image url="@New_Document.png" />
     </ImageView>
 
-    <ImageView fx:id="browseImg" fitHeight="150.0" fitWidth="200.0" pickOnBounds="true" preserveRatio="true" GridPane.columnIndex="1" GridPane.rowIndex="1">
+    <ImageView fx:id="browseImg" fitHeight="150.0" fitWidth="200.0" pickOnBounds="true" preserveRatio="true"
+               GridPane.columnIndex="1" GridPane.rowIndex="2" GridPane.halignment="CENTER">
         <Image url="@Import_Document.jpg" />
     </ImageView>
 
-    <ImageView fx:id="joinImg" fitHeight="150.0" fitWidth="200.0" pickOnBounds="true" preserveRatio="true" GridPane.columnIndex="2" GridPane.rowIndex="1">
+    <ImageView fx:id="joinImg" fitHeight="150.0" fitWidth="200.0" pickOnBounds="true" preserveRatio="true"
+               GridPane.columnIndex="2" GridPane.rowIndex="2" GridPane.halignment="CENTER">
         <Image url="@Join_Session.jpg" />
     </ImageView>
 
+    <!-- Option Labels -->
+    <Label text="Create New Document"
+           GridPane.columnIndex="0" GridPane.rowIndex="3" GridPane.halignment="CENTER"
+           style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #495057;" />
+
+    <Label text="Import Existing Document"
+           GridPane.columnIndex="1" GridPane.rowIndex="3" GridPane.halignment="CENTER"
+           style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #495057;" />
 
     <!-- Label for Input Field -->
-    <Label fx:id="sessionLabel" text="Enter Session ID:" GridPane.columnIndex="2" GridPane.halignment="CENTER" GridPane.rowIndex="2" styleClass="section-header"/>
+    <Label fx:id="sessionLabel" text="Enter Session ID:"
+           GridPane.columnIndex="2" GridPane.halignment="CENTER" GridPane.rowIndex="3"
+           style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #495057;" />
 
     <!-- TextField (Only in the Join Section) -->
-    <TextField fx:id="sessionField" GridPane.columnIndex="2" GridPane.halignment="CENTER" GridPane.rowIndex="3" />
+    <TextField fx:id="sessionField"
+               prefWidth="180.0" prefHeight="30.0"
+               GridPane.columnIndex="2" GridPane.halignment="CENTER" GridPane.rowIndex="4"
+               style="-fx-background-radius: 4px;" />
+
+    <!-- Error message -->
     <Label fx:id="errorLabel"
            text="Invalid session code. Please try again."
            visible="false"
-           style="-fx-text-fill: red; -fx-font-size: 12px;"
            GridPane.columnIndex="2"
            GridPane.halignment="CENTER"
-           GridPane.rowIndex="4" />
-    <!-- Buttons (Aligned in the same row) -->
-    <Button fx:id="newDocBtn" onAction="#handleNewDocBtn" text="New Document" GridPane.columnIndex="0" GridPane.halignment="CENTER" GridPane.rowIndex="4" styleClass="btn-success"/>
+           GridPane.rowIndex="5"
+           style="-fx-text-fill: #dc3545; -fx-font-size: 12px;" />
 
-    <Button fx:id="browseBtn" onAction="#handleBrowse" text="Browse" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="4" styleClass="btn-success"/>
+    <!-- Buttons with consistent styling -->
+    <Button fx:id="newDocBtn" onAction="#handleNewDocBtn" text="New Document"
+            prefWidth="150.0" prefHeight="35.0"
+            GridPane.columnIndex="0" GridPane.halignment="CENTER" GridPane.rowIndex="6"
+            style="-fx-background-color: #28a745; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 4px;" />
 
-    <Button fx:id="joinBtn" onAction="#handleJoinBtn" text="Join" GridPane.columnIndex="2" GridPane.halignment="CENTER" GridPane.rowIndex="4" styleClass="btn-success"/>
-   <Label fx:id="titleLabel" contentDisplay="CENTER" styleClass="titleLabel" text="Welcome to our Real-Time Collaborative Text Editor" textAlignment="CENTER" GridPane.columnIndex="1" />
+    <Button fx:id="browseBtn" onAction="#handleBrowse" text="Browse Files"
+            prefWidth="150.0" prefHeight="35.0"
+            GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="6"
+            style="-fx-background-color: #17a2b8; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 4px;" />
+
+    <Button fx:id="joinBtn" onAction="#handleJoinBtn" text="Join Session"
+            prefWidth="150.0" prefHeight="35.0"
+            GridPane.columnIndex="2" GridPane.halignment="CENTER" GridPane.rowIndex="6"
+            style="-fx-background-color: #007bff; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 4px;" />
 </GridPane>
