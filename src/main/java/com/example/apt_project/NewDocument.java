@@ -47,9 +47,6 @@ public class NewDocument {
     public Button copyEditorCodeBtn;
     public Button copyViewerCodeBtn;
     public Label editor_1;
-    public Label editor_2;
-    public Label editor_3;
-    public Label editor_4;
 
     public VBox editorListContainer;
     public VBox viewerListContainer;
@@ -245,6 +242,7 @@ public class NewDocument {
                                         if (count <= 4) {
                                             addRandomEditor(userId);
                                         }
+
                                     }
                                     else if (typeOfUser.equalsIgnoreCase("viewer")) {
                                         addRandomViewer(userId);

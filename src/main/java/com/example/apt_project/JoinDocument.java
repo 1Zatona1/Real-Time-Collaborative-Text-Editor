@@ -28,10 +28,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.sql.Timestamp;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 public class JoinDocument {
     @FXML
@@ -49,6 +46,11 @@ public class JoinDocument {
     private String editorCode;
     private String viewerCode;
     private String sessionId;
+    public VBox editorListContainer;
+    public VBox viewerListContainer;
+    private final Set<String> usedNames = new HashSet<>();
+
+
     private boolean isProcessingRemoteChange = false;
     WebSocketHandler myWebSocket = new WebSocketHandler();
     HttpHelper httpHelper = new HttpHelper();
@@ -81,6 +83,63 @@ public class JoinDocument {
         String userType = codeArea.isEditable() ? "editor" : "viewer";
         String userEvent = "leave," + currentUserId + "," + userType;
         myWebSocket.updateUserEvent(sessionId, userEvent);
+    }
+
+    private String getUniqueUsername() {
+        String name;
+        do {
+            name = UsernameGenerator.generateAnonymousUsername();
+        } while (usedNames.contains(name));
+        usedNames.add(name);
+        return name;
+    }
+
+    public void addRandomEditor(String userId) {
+        String username = getUniqueUsername();
+        addEditor(username, userId);
+    }
+
+    public void addRandomViewer(String userId) {
+        String username = getUniqueUsername();
+        addViewer(username, userId);
+    }
+
+    public void addEditor(String username, String userId) {
+        Label label = new Label("Editor: " + username + " " + userId);
+        label.getStyleClass().add("user-label"); // optional style class
+        editorListContainer.getChildren().add(label);
+    }
+
+    public void addViewer(String username, String userId) {
+        Label label = new Label("Viewer: " + username + " " + userId);
+        label.getStyleClass().add("user-label"); // optional style class
+        viewerListContainer.getChildren().add(label);
+    }
+
+    public void removeEditor(String userId) {
+        Label toRemove = null;
+        for (javafx.scene.Node node : editorListContainer.getChildren()) {
+            if (node instanceof Label label && label.getText().contains(userId)) {
+                toRemove = label;
+                break;
+            }
+        }
+        if (toRemove != null) {
+            editorListContainer.getChildren().remove(toRemove);
+        }
+    }
+
+    public void removeViewer(String userId) {
+        Label toRemove = null;
+        for (javafx.scene.Node node : viewerListContainer.getChildren()) {
+            if (node instanceof Label label && label.getText().contains(userId)) {
+                toRemove = label;
+                break;
+            }
+        }
+        if (toRemove != null) {
+            viewerListContainer.getChildren().remove(toRemove);
+        }
     }
 
 
@@ -165,6 +224,7 @@ public class JoinDocument {
         System.out.println("Finished initialization");
         updateUIFromCRDT();
         codeArea.plainTextChanges().subscribe(this::handleTextChange);
+        subscribeToUserEvent(sessionId);
         subscribeToDocument(sessionId);
     }
 
@@ -213,6 +273,67 @@ public class JoinDocument {
                                     isProcessingRemoteChange = false;
                                 }
                             });
+                        }
+                    }
+                });
+
+                System.out.println("Subscribed to document " + sessionId);
+            } catch (Exception e) {
+                System.out.println("Failed to subscribe to document: " + e.getMessage());
+                e.printStackTrace();
+            }
+        } else {
+            System.out.println("Not connected to WebSocket server");
+        }
+    }
+
+    public void subscribeToUserEvent(String sessionId){
+        StompSession stompSession = myWebSocket.getStompSession();
+
+        if (stompSession != null && stompSession.isConnected()) {
+            try {
+                String topic = "/topic/userEvent/" + sessionId;
+                stompSession.subscribe(topic, new StompFrameHandler() {
+                    @Override
+                    public Type getPayloadType(StompHeaders headers) {
+                        return String.class;
+                    }
+
+                    @Override
+                    public void handleFrame(StompHeaders headers, Object payload) {
+                        if (payload instanceof String) {
+                            System.out.println("ana 4a8al aho wla eh");
+
+                            Platform.runLater(() -> {
+                                String message = payload.toString();
+                                String[] parts = message.split(",", -1);
+                                if (parts.length < 3) return;
+                                String typeOfEvent = parts[0];
+                                String userId = parts[1];
+                                String typeOfUser = parts[2];
+
+                                if (typeOfEvent.equalsIgnoreCase("join")) {
+                                    if (typeOfUser.equalsIgnoreCase("editor")) {
+                                        int count = HttpHelper.getNumberOfEditors(sessionId);
+                                        System.out.println("Count now: " + count);
+                                        if (count <= 4) {
+                                            addRandomEditor(userId);
+                                        }
+                                    }
+                                    else if (typeOfUser.equalsIgnoreCase("viewer")) {
+                                        addRandomViewer(userId);
+                                    }
+                                }
+                                else if(typeOfEvent.equalsIgnoreCase("leave")) {
+                                    if (typeOfUser.equalsIgnoreCase("editor")) {
+                                        removeEditor(userId);
+                                    }
+                                    else if (typeOfUser.equalsIgnoreCase("viewer")) {
+                                        removeViewer(userId);
+                                    }
+                                }
+                            });
+
                         }
                     }
                 });

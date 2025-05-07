@@ -9,9 +9,8 @@
 <?import javafx.scene.layout.VBox?>
 
 <AnchorPane prefHeight="600.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.apt_project.JoinDocument">
-    <HBox fx:id="mainContainer" spacing="0.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+    <HBox fx:id="mainContainer" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
         <VBox fx:id="sidebar" prefWidth="250.0" styleClass="sidebar">
-            <!-- Navigation Section -->
             <Label styleClass="section-header" text="Document Controls" />
             <Separator styleClass="section-separator" />
 
@@ -20,8 +19,19 @@
                 <Button fx:id="backBtn" mnemonicParsing="false" onAction="#handleBackBtn" text="Back to Main" styleClass="btn-danger" />
             </VBox>
 
+            <!-- Editor List Section -->
+            <Label styleClass="section-header" text="Editors" />
+            <Separator styleClass="section-separator" />
+            <VBox fx:id="editorListContainer" spacing="3">
 
+            </VBox>
+
+            <!-- Viewer List Section -->
+            <Label styleClass="section-header" text="Viewers" />
+            <Separator styleClass="section-separator" />
+            <VBox fx:id="viewerListContainer" spacing="3">
+
+            </VBox>
         </VBox>
-        <!-- CodeArea will be added programmatically -->
     </HBox>
 </AnchorPane>
